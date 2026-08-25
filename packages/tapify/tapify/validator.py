@@ -22,6 +22,8 @@ def get_at() -> str:
     return 'filename:lineno' of the first user frame."""
     frames = traceback.extract_stack()
     for frame in reversed(frames[:-1]):
+        if frame.filename.startswith("<"):
+            continue
         if "tapify" in frame.filename:
             continue
         if "site-packages" in frame.filename:
