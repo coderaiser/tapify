@@ -41,11 +41,10 @@ def _(t):
     orig = sys.stdout
     sys.stdout = fake
     try:
-        t.equal(_colorize("- x"), "\x1b[32m- x\x1b[39m")
-        t.equal(_colorize("+ y"), "\x1b[31m+y\x1b[39m".replace("+y", "+ y"))
-        t.equal(_colorize("  z"), "  z")
+        result = (_colorize("- x"), _colorize("+ y"), _colorize("  z"))
     finally:
         sys.stdout = orig
+    t.equal(result, ("\x1b[32m- x\x1b[39m", "\x1b[31m+ y\x1b[39m", "  z"))
     t.end()
 
 

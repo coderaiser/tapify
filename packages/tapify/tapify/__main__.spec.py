@@ -131,14 +131,14 @@ def _(t):
     out = sys.stdout.getvalue()
     sys.stdout = orig_stdout
     sys.argv = orig_argv
-    t.match(out, r"Usage: python -m tapify")
-    t.equal(code, 0)
+    t.ok("Usage: python -m tapify" in out and code == 0)
     t.end()
 
 
 @test("cli: --version prints version and exits OK")
 def _(t):
     import io
+    import re
 
     import tapify.__main__ as m
 
@@ -154,6 +154,5 @@ def _(t):
     out = sys.stdout.getvalue()
     sys.stdout = orig_stdout
     sys.argv = orig_argv
-    t.match(out, r"^v\d+\.\d+")
-    t.equal(code, 0)
+    t.ok(bool(re.match(r"^v\d+\.\d+", out)) and code == 0)
     t.end()

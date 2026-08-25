@@ -1,5 +1,6 @@
 import io
 import os
+import re
 import sys
 
 from tapify import test
@@ -157,8 +158,7 @@ def _(t):
     formatter.test(test="scope: bar")
     formatter.success(count=1, message="ok msg")
     out = formatter.end(count=1, passed=1, failed=0, skipped=0)
-    t.ok(out.startswith("\r"))
-    t.match(out, r"ok msg")
+    t.ok(out.startswith("\r") and "ok msg" in out)
     t.end()
 
 
@@ -182,12 +182,10 @@ def _(t):
             error_stack="stack here",
         )
         out = fmt.end(count=3, passed=2, failed=1, skipped=1)
-        t.ok(out.startswith("\r"))
-        t.match(out, r"█")
-        t.match(out, r"good thing")
-        t.match(out, r"bad thing")
-        t.match(out, r"⚠️ skip")
-        t.match(out, r"# fail 1")
+        ok = out.startswith("\r") and all(
+            re.search(p, out) for p in (r"█", r"good thing", r"bad thing", r"⚠️ skip", r"# fail 1")
+        )
+        t.ok(ok)
     finally:
         for k, v in saved.items():
             if v is None:
@@ -200,12 +198,11 @@ def _(t):
 @test("formatter_progress_bar: color functions")
 def _(t):
     identity = fpb._color_fn("#ff0000")
-    t.equal(identity("x"), "x")  # not a tty → no colors
     named = fpb._color_fn("red")
-    t.equal(named("x"), "x")
     unknown = fpb._color_fn("chartreuse")
-    t.equal(unknown("x"), "x")
-    t.equal(fpb._devnull().__class__.__name__, "_Devnull")
+    results = (identity("x"), named("x"), unknown("x"), fpb._devnull().__class__.__name__)
+    # not a tty → no colors
+    t.equal(results, ("x", "x", "x", "_Devnull"))
     t.end()
 
 

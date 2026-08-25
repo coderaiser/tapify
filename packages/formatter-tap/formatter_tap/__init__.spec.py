@@ -1,4 +1,5 @@
 import io
+import re
 
 from tapify import test
 from tapify.supertape import create_test
@@ -71,8 +72,8 @@ def _(t):
         t2.end()
 
     run()
-    t.match(buf.getvalue(), r"# skip 1")
-    t.not_match(buf.getvalue(), r"# fail")
+    out = buf.getvalue()
+    t.ok(bool(re.search(r"# skip 1", out)) and not re.search(r"# fail", out))
     t.end()
 
 

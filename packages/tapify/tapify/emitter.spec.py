@@ -13,17 +13,28 @@ def _(t):
     t.end()
 
 
-@test("emitter: loop receives emit and tests")
+@test("emitter: loop receives emit")
 def _(t):
     seen = {}
 
     def loop_fn(*, emit, tests):
         seen["emit"] = emit
-        seen["tests"] = tests
 
     em = create_emitter(loop_fn=loop_fn)
     em.emit("loop")
     t.ok("emit" in seen)
+    t.end()
+
+
+@test("emitter: loop receives tests")
+def _(t):
+    seen = {}
+
+    def loop_fn(*, emit, tests):
+        seen["tests"] = tests
+
+    em = create_emitter(loop_fn=loop_fn)
+    em.emit("loop")
     t.ok("tests" in seen)
     t.end()
 
@@ -36,7 +47,6 @@ def _(t):
         pass
 
     em.emit("test", "msg", fn, {"skip": True})
-    em.emit("loop")
     # loop_fn captured above would have been called with the same list;
     # use internal check via a fresh emitter
     seen = {}
@@ -48,6 +58,22 @@ def _(t):
     em2.emit("test", "msg", fn, {"skip": True})
     em2.emit("loop")
     t.equal(seen["tests"][0]["message"], "msg")
+    t.end()
+
+
+@test("emitter: test event keeps options")
+def _(t):
+    def fn(t):
+        pass
+
+    seen = {}
+
+    def loop_fn(*, emit, tests):
+        seen["tests"] = tests
+
+    em2 = create_emitter(loop_fn=loop_fn)
+    em2.emit("test", "msg", fn, {"skip": True})
+    em2.emit("loop")
     t.ok(seen["tests"][0]["skip"])
     t.end()
 
@@ -75,31 +101,38 @@ def _(t):
 
 @test("emitter: start_run executes tests and emits done")
 def _(t):
-    from tapify.emitter import create_emitter
-
     done = []
-
-    def loop_fn(*, emit, tests):
-        pass
-
-    em = create_emitter(loop_fn=loop_fn)
-    em.on("done", lambda: done.append(1))
 
     def fn(t2):
         t2.ok(True)
         t2.end()
 
     # register through the emitter so the shared list is populated
-    seen = {}
-
     def capture(*, emit, tests):
-        seen["tests"] = tests
         emit("run")
 
     em2 = create_emitter(loop_fn=capture)
     em2.on("done", lambda: done.append(1))
-    em2.emit("test", "scope: x", fn, {})
+    em2.emit("test", "scope: x", fn, {"at": "emitter.spec.py:1"})
     em2.emit("loop")
     t.equal(done, [1])
-    t.equal(seen["tests"][0]["message"], "scope: x")
+    t.end()
+
+
+@test("emitter: start_run runs the registered test")
+def _(t):
+    ran = []
+
+    def fn(t2):
+        ran.append(1)
+        t2.ok(True)
+        t2.end()
+
+    def capture(*, emit, tests):
+        emit("run")
+
+    em2 = create_emitter(loop_fn=capture)
+    em2.emit("test", "scope: x", fn, {"at": "emitter.spec.py:1"})
+    em2.emit("loop")
+    t.equal(ran, [1])
     t.end()

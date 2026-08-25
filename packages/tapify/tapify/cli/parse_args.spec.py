@@ -69,10 +69,15 @@ def _(t):
     t.end()
 
 
-@test("parse_args: help and version flags")
+@test("parse_args: help flag")
 def _(t):
     args = parse_args(["-h"])
     t.ok(args.help)
+    t.end()
+
+
+@test("parse_args: version flag")
+def _(t):
     args = parse_args(["--version"])
     t.ok(args.version)
     t.end()

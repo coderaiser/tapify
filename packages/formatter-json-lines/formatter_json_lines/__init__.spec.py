@@ -74,7 +74,10 @@ def _(t):
 
 @test("formatter_json_lines: start and success produce nothing")
 def _(t):
-    t.equal(formatter_json_lines.start(total=1), None)
-    t.equal(formatter_json_lines.success(count=1, message="x"), None)
-    t.equal(formatter_json_lines.comment(message="hi"), None)
+    results = (
+        formatter_json_lines.start(total=1),
+        formatter_json_lines.success(count=1, message="x"),
+        formatter_json_lines.comment(message="hi"),
+    )
+    t.equal(results, (None, None, None))
     t.end()

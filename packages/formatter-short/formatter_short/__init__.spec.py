@@ -1,4 +1,5 @@
 import io
+import re
 
 from tapify import test
 from tapify.supertape import create_test
@@ -22,8 +23,7 @@ def _(t):
         t2.end()
 
     out = _run({"scope: bad": bad})
-    t.match(out, r"not ok 1 should be truthy")
-    t.not_match(out, r"stack: \|-")
+    t.ok(bool(re.search(r"not ok 1 should be truthy", out)) and not re.search(r"stack: \|-", out))
     t.end()
 
 

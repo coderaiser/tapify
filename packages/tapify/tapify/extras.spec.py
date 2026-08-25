@@ -118,6 +118,26 @@ def _(t):
     with mock.patch("tapify.validator.traceback.extract_stack", return_value=frames):
         at = get_at()
     t.equal(at, "user.py:42")
+    t.end()
+
+
+@test("extras: get_at skips frozen frames")
+def _(t):
+    from tapify.validator import get_at
+
+    frames = [
+        mock.Mock(filename="<frozen importlib._bootstrap>", lineno=488),
+        mock.Mock(filename="user.py", lineno=42),
+    ]
+    with mock.patch("tapify.validator.traceback.extract_stack", return_value=frames):
+        at = get_at()
+    t.equal(at, "user.py:42")
+    t.end()
+
+
+@test("extras: get_at falls back when only tapify frames")
+def _(t):
+    from tapify.validator import get_at
 
     only_tapify = [mock.Mock(filename="x/tapify/y.py", lineno=7)]
     with mock.patch("tapify.validator.traceback.extract_stack", return_value=only_tapify):

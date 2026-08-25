@@ -1,4 +1,5 @@
 import io
+import re
 
 from tapify import test
 from tapify.supertape import create_test
@@ -27,14 +28,13 @@ def _(t):
 
     out = _run({"scope: good": good, "scope: bad": bad})
     lines = out.splitlines()
-    t.equal(lines[0], "TAP version 13")
-    t.equal(lines[1], "# scope: bad")
-    t.match(out, r"not ok 2 should be truthy")
+    ok = lines[0] == "TAP version 13" and lines[1] == "# scope: bad"
+    t.ok(ok and bool(re.search(r"not ok 2 should be truthy", out)))
     t.end()
 
 
 @test("formatter_fail: success and test_end produce nothing")
 def _(t):
-    t.equal(formatter_fail.success(count=1, message="x"), None)
-    t.equal(formatter_fail.test_end(count=1), None)
+    results = (formatter_fail.success(count=1, message="x"), formatter_fail.test_end(count=1))
+    t.equal(results, (None, None))
     t.end()
