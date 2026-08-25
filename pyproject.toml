@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tapify-workspace"
+version = "0.0.0"
+requires-python = ">=3.11"
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B006"]
+
+[tool.coverage.run]
+source = ["packages"]
+branch = true
+omit = ["**/*spec.py"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if os.name == .nt.:",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "tapify",
+    "formatter-tap",
+    "formatter-fail",
+    "formatter-short",
+    "formatter-progress-bar",
+    "formatter-json-lines",
+    "ruff>=0.6",
+    "coverage>=7",
+]
+
+[tool.uv.sources]
+tapify = { workspace = true }
+formatter-tap = { workspace = true }
+formatter-fail = { workspace = true }
+formatter-short = { workspace = true }
+formatter-progress-bar = { workspace = true }
+formatter-json-lines = { workspace = true }

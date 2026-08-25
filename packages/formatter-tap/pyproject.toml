@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "formatter-tap"
+version = "0.1.0"
+dependencies = ["tapify"]
+
+[tool.uv.sources]
+tapify = { workspace = true }
+
+[project.entry-points."tapify.formatter"]
+tap = "formatter_tap"
+
+[tool.hatch.build.targets.wheel]
+packages = ["formatter_tap"]

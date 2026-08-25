@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "formatter-json-lines"
+version = "0.1.0"
+dependencies = ["tapify"]
+
+[tool.uv.sources]
+tapify = { workspace = true }
+
+[project.entry-points."tapify.formatter"]
+json-lines = "formatter_json_lines"
+
+[tool.hatch.build.targets.wheel]
+packages = ["formatter_json_lines"]

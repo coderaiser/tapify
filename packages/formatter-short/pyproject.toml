@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "formatter-short"
+version = "0.1.0"
+dependencies = ["tapify"]
+
+[tool.uv.sources]
+tapify = { workspace = true }
+
+[project.entry-points."tapify.formatter"]
+short = "formatter_short"
+
+[tool.hatch.build.targets.wheel]
+packages = ["formatter_short"]
