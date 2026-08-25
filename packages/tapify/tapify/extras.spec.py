@@ -28,11 +28,12 @@ def _main_run(args):
     import tapify.__main__ as m
     import tapify.supertape as st
 
-    orig_argv, orig_stdout = sys.argv, sys.stdout
+    orig_argv, orig_stdout, orig_stderr = sys.argv, sys.stdout, sys.stderr
     saved_tests = st._tests
     st._tests = []  # isolate: only files imported by main() register
     sys.argv = ["tapify", *args]
     sys.stdout = io.StringIO()
+    sys.stderr = io.StringIO()
     code = None
     try:
         m.main()
@@ -41,6 +42,7 @@ def _main_run(args):
     finally:
         sys.argv = orig_argv
         sys.stdout = orig_stdout
+        sys.stderr = orig_stderr
         st._tests = saved_tests
     return code
 

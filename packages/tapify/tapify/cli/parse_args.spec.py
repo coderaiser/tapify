@@ -60,11 +60,18 @@ def _(t):
 
 @test("parse_args: unknown format exits INVALID_OPTION")
 def _(t):
+    import io
+    import sys
+
     raised = False
+    orig_stderr = sys.stderr
+    sys.stderr = io.StringIO()
     try:
         parse_args(["-f", "__nope__"])
     except SystemExit as e:
         raised = e.code == 4
+    finally:
+        sys.stderr = orig_stderr
     t.ok(raised)
     t.end()
 
