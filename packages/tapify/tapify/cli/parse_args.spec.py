@@ -58,21 +58,21 @@ def _(t):
     t.end()
 
 
-@test('parse_args: unknown format exits INVALID_OPTION')
+@test("parse_args: unknown format exits INVALID_OPTION")
 def _(t):
     raised = False
     try:
-        parse_args(['-f', '__nope__'])
+        parse_args(["-f", "__nope__"])
     except SystemExit as e:
         raised = e.code == 4
     t.ok(raised)
     t.end()
 
 
-@test('parse_args: help and version flags')
+@test("parse_args: help and version flags")
 def _(t):
-    args = parse_args(['-h'])
+    args = parse_args(["-h"])
     t.ok(args.help)
-    args = parse_args(['--version'])
+    args = parse_args(["--version"])
     t.ok(args.version)
     t.end()

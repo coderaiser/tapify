@@ -1,7 +1,3 @@
-def _lines(*items) -> str:
-    return "\n".join(items)
-
-
 def start(*, total, **_) -> str:
     return "TAP version 13\n"
 

@@ -14,28 +14,32 @@ def _(t):
     t.end()
 
 
-@test('format: parse_at returns single-line stack unchanged')
+@test("format: parse_at returns single-line stack unchanged")
 def _(t):
     from tapify.format import parse_at
-    t.equal(parse_at('file.py:1'), 'file.py:1')
+
+    t.equal(parse_at("file.py:1"), "file.py:1")
     t.end()
 
 
-@test('format: parse_at picks user frame for long error stacks')
+@test("format: parse_at picks user frame for long error stacks")
 def _(t):
     from tapify.format import parse_at
-    stack = '\n'.join(['Error: boom', 'a', 'b', 'c', 'd', 'e',
-                       'f', 'g', 'h', 'i', 'j', 'user.py:42'])
-    t.equal(parse_at(stack), 'c')
+
+    stack = "\n".join(
+        ["Error: boom", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "user.py:42"]
+    )
+    t.equal(parse_at(stack), "c")
     t.end()
 
 
-@test('format: parse_at raises for short multi-line stacks')
+@test("format: parse_at raises for short multi-line stacks")
 def _(t):
     from tapify.format import parse_at
+
     raised = False
     try:
-        parse_at('a\nb\nc')
+        parse_at("a\nb\nc")
     except RuntimeError:
         raised = True
     t.ok(raised)

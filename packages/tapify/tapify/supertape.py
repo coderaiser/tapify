@@ -86,15 +86,25 @@ def stub(overrides: dict):
 
 def _create_extend(base_test):
     def extend(extensions: dict):
-        def extended(msg, fn=None, **o):
-            return base_test(msg, fn, extensions=extensions, **o)
+        def _merge(o):
+            merged = dict(extensions)
+            merged.update(o.pop("extensions", {}))
+            o["extensions"] = merged
 
-        extended.only = lambda msg, fn=None, **o: base_test(
-            msg, fn, only=True, extensions=extensions, **o
-        )
-        extended.skip = lambda msg, fn=None, **o: base_test(
-            msg, fn, skip=True, extensions=extensions, **o
-        )
+        def extended(msg, fn=None, **o):
+            _merge(o)
+            return base_test(msg, fn, **o)
+
+        def only(msg, fn=None, **o):
+            _merge(o)
+            return base_test(msg, fn, only=True, **o)
+
+        def skip(msg, fn=None, **o):
+            _merge(o)
+            return base_test(msg, fn, skip=True, **o)
+
+        extended.only = only
+        extended.skip = skip
         extended.extend = _create_extend(extended)
         return extended
 
@@ -154,15 +164,25 @@ def create_test(*, format="tap", formatter=None, stream=None, **options):
 
     def _extend(base):
         def extend(extensions: dict):
-            def extended(msg, fn=None, **o):
-                return base(msg, fn, extensions=extensions, **o)
+            def _merge(o):
+                merged = dict(extensions)
+                merged.update(o.pop("extensions", {}))
+                o["extensions"] = merged
 
-            extended.skip = lambda msg, fn=None, **o: base(
-                msg, fn, skip=True, extensions=extensions, **o
-            )
-            extended.only = lambda msg, fn=None, **o: base(
-                msg, fn, only=True, extensions=extensions, **o
-            )
+            def extended(msg, fn=None, **o):
+                _merge(o)
+                return base(msg, fn, **o)
+
+            def skip(msg, fn=None, **o):
+                _merge(o)
+                return base(msg, fn, skip=True, **o)
+
+            def only(msg, fn=None, **o):
+                _merge(o)
+                return base(msg, fn, only=True, **o)
+
+            extended.skip = skip
+            extended.only = only
             extended.extend = _extend(extended)
             return extended
 

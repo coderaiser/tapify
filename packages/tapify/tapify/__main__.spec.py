@@ -113,14 +113,15 @@ def _(t):
     t.end()
 
 
-@test('cli: --help exits OK and prints usage')
+@test("cli: --help exits OK and prints usage")
 def _(t):
     import io
 
     import tapify.__main__ as m
+
     orig_argv = sys.argv
     orig_stdout = sys.stdout
-    sys.argv = ['tapify', '--help']
+    sys.argv = ["tapify", "--help"]
     sys.stdout = io.StringIO()
     code = None
     try:
@@ -130,19 +131,20 @@ def _(t):
     out = sys.stdout.getvalue()
     sys.stdout = orig_stdout
     sys.argv = orig_argv
-    t.match(out, r'Usage: python -m tapify')
+    t.match(out, r"Usage: python -m tapify")
     t.equal(code, 0)
     t.end()
 
 
-@test('cli: --version prints version and exits OK')
+@test("cli: --version prints version and exits OK")
 def _(t):
     import io
 
     import tapify.__main__ as m
+
     orig_argv = sys.argv
     orig_stdout = sys.stdout
-    sys.argv = ['tapify', '--version']
+    sys.argv = ["tapify", "--version"]
     sys.stdout = io.StringIO()
     code = None
     try:
@@ -152,6 +154,6 @@ def _(t):
     out = sys.stdout.getvalue()
     sys.stdout = orig_stdout
     sys.argv = orig_argv
-    t.match(out, r'^v\d+\.\d+')
+    t.match(out, r"^v\d+\.\d+")
     t.equal(code, 0)
     t.end()

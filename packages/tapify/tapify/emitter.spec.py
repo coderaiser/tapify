@@ -73,16 +73,17 @@ def _(t):
     t.end()
 
 
-@test('emitter: start_run executes tests and emits done')
+@test("emitter: start_run executes tests and emits done")
 def _(t):
     from tapify.emitter import create_emitter
+
     done = []
 
     def loop_fn(*, emit, tests):
         pass
 
     em = create_emitter(loop_fn=loop_fn)
-    em.on('done', lambda: done.append(1))
+    em.on("done", lambda: done.append(1))
 
     def fn(t2):
         t2.ok(True)
@@ -92,13 +93,13 @@ def _(t):
     seen = {}
 
     def capture(*, emit, tests):
-        seen['tests'] = tests
-        emit('run')
+        seen["tests"] = tests
+        emit("run")
 
     em2 = create_emitter(loop_fn=capture)
-    em2.on('done', lambda: done.append(1))
-    em2.emit('test', 'scope: x', fn, {})
-    em2.emit('loop')
+    em2.on("done", lambda: done.append(1))
+    em2.emit("test", "scope: x", fn, {})
+    em2.emit("loop")
     t.equal(done, [1])
-    t.equal(seen['tests'][0]['message'], 'scope: x')
+    t.equal(seen["tests"][0]["message"], "scope: x")
     t.end()

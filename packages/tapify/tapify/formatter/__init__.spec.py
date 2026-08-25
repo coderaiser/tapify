@@ -54,14 +54,14 @@ def _(t):
     t.end()
 
 
-@test('formatter: entry-point lookup resolves custom name')
+@test("formatter: entry-point lookup resolves custom name")
 def _(t):
     import importlib.metadata
 
     from tapify.formatter import create_formatter as cf
 
     class FakeEP:
-        name = 'custom-fmt'
+        name = "custom-fmt"
 
         def load(self):
             return _mod()
@@ -69,8 +69,8 @@ def _(t):
     orig = importlib.metadata.entry_points
     importlib.metadata.entry_points = lambda group=None: [FakeEP()]
     try:
-        harness, facade = cf('custom-fmt')
+        harness, facade = cf("custom-fmt")
     finally:
         importlib.metadata.entry_points = orig
-    t.ok(hasattr(harness, 'write'))
+    t.ok(hasattr(harness, "write"))
     t.end()

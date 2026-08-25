@@ -116,7 +116,7 @@ def _(t):
     t.end()
 
 
-@test('supertape: test.skip/only register globally')
+@test("supertape: test.skip/only register globally")
 def _(t):
     from tapify import supertape
 
@@ -124,50 +124,51 @@ def _(t):
         t2.ok(True)
         t2.end()
 
-    supertape.test.skip('scope: skipped-global')(fn)
-    supertape.test.only('scope: only-global')(fn)
-    messages = [entry['message'] for entry in supertape._tests]
-    t.ok('scope: skipped-global' in messages)
-    t.ok('scope: only-global' in messages)
-    only_entry = [e for e in supertape._tests if e['message'] == 'scope: only-global'][0]
-    t.ok(only_entry['only'])
+    supertape.test.skip("scope: skipped-global")(fn)
+    supertape.test.only("scope: only-global")(fn)
+    messages = [entry["message"] for entry in supertape._tests]
+    t.ok("scope: skipped-global" in messages)
+    t.ok("scope: only-global" in messages)
+    only_entry = [e for e in supertape._tests if e["message"] == "scope: only-global"][0]
+    t.ok(only_entry["only"])
     supertape.reset()
     t.equal(supertape._tests, [])
     t.end()
 
 
-@test('supertape: run executes registered tests into stream')
+@test("supertape: run executes registered tests into stream")
 def _(t):
     from tapify import supertape
+
     buf = io.StringIO()
     supertape.reset()
-    supertape.init({'format': 'tap', 'stream': buf})
+    supertape.init({"format": "tap", "stream": buf})
 
-    @test('scope: global-pass')
+    @test("scope: global-pass")
     def fn(t2):
         t2.ok(True)
         t2.end()
 
     result = supertape.run()
-    t.equal(result['failed'], 0)
-    t.match(buf.getvalue(), r'ok 1')
+    t.equal(result["failed"], 0)
+    t.match(buf.getvalue(), r"ok 1")
     supertape.reset()
     t.end()
 
 
-@test('supertape: nested extend chains')
+@test("supertape: nested extend chains")
 def _(t):
     buf = io.StringIO()
-    t_fn, _, run = create_test(format='tap', stream=buf)
-    base = t_fn.extend({'pos': lambda ops: lambda x: ops['ok'](x > 0)})
-    nested = base.extend({'small': lambda ops: lambda x: ops['ok'](x < 10)})
+    t_fn, _, run = create_test(format="tap", stream=buf)
+    base = t_fn.extend({"pos": lambda ops: lambda x: ops["ok"](x > 0)})
+    nested = base.extend({"small": lambda ops: lambda x: ops["ok"](x < 10)})
 
-    @nested('math: pos small')
+    @nested("math: pos small")
     def fn(t2):
         t2.pos(5)
         t2.small(5)
         t2.end()
 
     run()
-    t.match(buf.getvalue(), r'ok 1')
+    t.match(buf.getvalue(), r"ok 1")
     t.end()

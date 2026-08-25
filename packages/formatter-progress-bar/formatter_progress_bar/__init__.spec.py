@@ -5,7 +5,7 @@ import sys
 from tapify import test
 from tapify.supertape import create_test
 
-import formatter_progress_bar
+import formatter_progress_bar as fpb
 
 
 def _with_env(env, fn):
@@ -28,7 +28,7 @@ def _with_env(env, fn):
 def _run(fn_map, env=None) -> str:
     def _inner():
         buf = io.StringIO()
-        t_fn, _, run = create_test(formatter=formatter_progress_bar, stream=buf)
+        t_fn, _, run = create_test(formatter=fpb, stream=buf)
         for msg, fn in fn_map.items():
             t_fn(msg)(fn)
         run()
@@ -85,7 +85,7 @@ def _(t):
 def _(t):
     def _inner():
         buf = io.StringIO()
-        t_fn, _, run = create_test(formatter=formatter_progress_bar, stream=buf)
+        t_fn, _, run = create_test(formatter=fpb, stream=buf)
 
         @t_fn.skip("scope: skipped")
         def fn(t2):
@@ -114,7 +114,7 @@ def _(t):
 @test("formatter_progress_bar: _get_stream returns devnull when CI=1")
 def _(t):
     def _inner():
-        stream = formatter_progress_bar._get_stream(total=200)
+        stream = fpb._get_stream(total=200)
         t.not_equal(stream, sys.stderr)
 
     _with_env({"CI": "1"}, _inner)
@@ -124,7 +124,7 @@ def _(t):
 @test("formatter_progress_bar: _get_stream returns stderr when forced on")
 def _(t):
     def _inner():
-        stream = formatter_progress_bar._get_stream(total=1)
+        stream = fpb._get_stream(total=1)
         t.equal(stream, sys.stderr)
 
     _with_env({"TAPIFY_PROGRESS_BAR": "1"}, _inner)
@@ -134,7 +134,7 @@ def _(t):
 @test("formatter_progress_bar: _get_stream force off wins")
 def _(t):
     def _inner():
-        stream = formatter_progress_bar._get_stream(total=500)
+        stream = fpb._get_stream(total=500)
         t.not_equal(stream, sys.stderr)
 
     _with_env({"TAPIFY_PROGRESS_BAR": "0", "CI": None}, _inner)
@@ -144,7 +144,7 @@ def _(t):
 @test("formatter_progress_bar: jetbrains adds a space")
 def _(t):
     def _inner():
-        t.equal(formatter_progress_bar._format_ok(), "# ✅  ok")
+        t.equal(fpb._format_ok(), "# ✅  ok")
 
     _with_env({"TERMINAL_EMULATOR": "JetBrains-JediTerm"}, _inner)
     t.end()
@@ -152,11 +152,64 @@ def _(t):
 
 @test("formatter_progress_bar: create_formatter protocol works")
 def _(t):
-    formatter = formatter_progress_bar.create_formatter("#ff0000")
+    formatter = fpb.create_formatter("#ff0000")
     formatter.start(total=2)
     formatter.test(test="scope: bar")
     formatter.success(count=1, message="ok msg")
     out = formatter.end(count=1, passed=1, failed=0, skipped=0)
     t.ok(out.startswith("\r"))
     t.match(out, r"ok msg")
+    t.end()
+
+
+@test("formatter_progress_bar: non-CI bar renders and buffers")
+def _(t):
+    saved = {k: os.environ.get(k) for k in ("CI",)}
+    os.environ.pop("CI", None)
+    try:
+        fmt = fpb.create_formatter("#f9d472")
+        fmt.start(total=3)
+        fmt.test(test="scope: bar")
+        fmt.success(count=1, message="good thing")
+        fmt.fail(
+            at="file.py:1",
+            count=2,
+            message="bad thing",
+            operator="ok",
+            result=False,
+            expected=True,
+            output="",
+            error_stack="stack here",
+        )
+        out = fmt.end(count=3, passed=2, failed=1, skipped=1)
+        t.ok(out.startswith("\r"))
+        t.match(out, r"█")
+        t.match(out, r"good thing")
+        t.match(out, r"bad thing")
+        t.match(out, r"⚠️ skip")
+        t.match(out, r"# fail 1")
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+    t.end()
+
+
+@test("formatter_progress_bar: color functions")
+def _(t):
+    identity = fpb._color_fn("#ff0000")
+    t.equal(identity("x"), "x")  # not a tty → no colors
+    named = fpb._color_fn("red")
+    t.equal(named("x"), "x")
+    unknown = fpb._color_fn("chartreuse")
+    t.equal(unknown("x"), "x")
+    t.equal(fpb._devnull().__class__.__name__, "_Devnull")
+    t.end()
+
+
+@test("formatter_progress_bar: comment returns text")
+def _(t):
+    t.equal(fpb.create_formatter().comment(message="note"), "# note\n")
     t.end()

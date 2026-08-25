@@ -78,7 +78,8 @@ def global_current(name):
 def create_formatter(color=None):
     """createFormatter() protocol — returns an object with formatter hooks."""
     color = color or os.environ.get("TAPIFY_PROGRESS_BAR_COLOR", "#f9d472")
-    stream = _get_stream()
+    ci = bool(os.environ.get("CI"))
+    stream = sys.stdout if ci else _get_stream()
 
     class _Formatter:
         @staticmethod

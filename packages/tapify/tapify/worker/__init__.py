@@ -23,26 +23,46 @@ def run_with_worker(tests, *, format_name, stream=None, is_stop=None) -> int:
     result_box = [None]
 
     def _worker():
-        async def _run():
-            result_box[0] = await run_tests(tests, formatter=_QueueFormatter(q), is_stop=is_stop)
+        try:
 
-        asyncio.run(_run())
-        q.put(("__done__", {}))
+            async def _run():
+                result_box[0] = await run_tests(
+                    tests, formatter=_QueueFormatter(q), is_stop=is_stop
+                )
 
+            asyncio.run(_run())
+        finally:
+            q.put(("__done__", {}))
+
+    # Capture the raw write before override_stdout replaces it, so formatter
+    # output bypasses the console-log redirection.
     thread = threading.Thread(target=_worker, daemon=True)
-    thread.start()
+    raw_write = stream.write
+
+    class _RawStream:
+        @staticmethod
+        def write(text):
+            raw_write(text)
+
+        @staticmethod
+        def flush():
+            pass
 
     harness, _ = create_formatter(format_name)
-    harness.pipe(stream)
+    harness.pipe(_RawStream())
 
+    # Install the console-log redirect before the worker starts, so print()
+    # inside test functions is captured from the very first event.
     restore = _override_stdout(q)
+    thread.start()
+
     try:
         while True:
             event, data = q.get()
             if event == "__done__":
                 break
             if event == "console:log":
-                stream.write(data["message"])
+                raw_write(data["message"])
                 continue
             harness.write(event, data)
     finally:

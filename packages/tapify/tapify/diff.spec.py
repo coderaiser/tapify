@@ -29,32 +29,34 @@ def _(t):
     t.end()
 
 
-@test('diff: colorize adds ansi codes on tty')
+@test("diff: colorize adds ansi codes on tty")
 def _(t):
     import io
     import sys
 
     from tapify.diff import _colorize
+
     fake = io.StringIO()
     fake.isatty = lambda: True
     orig = sys.stdout
     sys.stdout = fake
     try:
-        t.equal(_colorize('- x'), '\x1b[32m- x\x1b[39m')
-        t.equal(_colorize('+ y'), '\x1b[31m+y\x1b[39m'.replace('+y', '+ y'))
-        t.equal(_colorize('  z'), '  z')
+        t.equal(_colorize("- x"), "\x1b[32m- x\x1b[39m")
+        t.equal(_colorize("+ y"), "\x1b[31m+y\x1b[39m".replace("+y", "+ y"))
+        t.equal(_colorize("  z"), "  z")
     finally:
         sys.stdout = orig
     t.end()
 
 
-@test('diff: header-only chunks return empty string')
+@test("diff: header-only chunks return empty string")
 def _(t):
     import tapify.diff as d
+
     orig = d.difflib.unified_diff
-    d.difflib.unified_diff = lambda *a, **kw: iter(['--- ', '+++ ', '@@ -1 +1 @@'])
+    d.difflib.unified_diff = lambda *a, **kw: iter(["--- ", "+++ ", "@@ -1 +1 @@"])
     try:
-        t.equal(d.diff(1, 2), '')
+        t.equal(d.diff(1, 2), "")
     finally:
         d.difflib.unified_diff = orig
     t.end()

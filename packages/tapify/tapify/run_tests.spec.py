@@ -178,7 +178,7 @@ def _(t):
     t.end()
 
 
-@test('run_tests: is_stop aborts remaining tests')
+@test("run_tests: is_stop aborts remaining tests")
 def _(t):
     ran = []
 
@@ -188,10 +188,22 @@ def _(t):
         t2.end()
 
     tests = [
-        {'message': 'scope: a', 'fn': fn, 'skip': False, 'only': False,
-         'extensions': {}, 'timeout': 3000},
-        {'message': 'scope: b', 'fn': fn, 'skip': False, 'only': False,
-         'extensions': {}, 'timeout': 3000},
+        {
+            "message": "scope: a",
+            "fn": fn,
+            "skip": False,
+            "only": False,
+            "extensions": {},
+            "timeout": 3000,
+        },
+        {
+            "message": "scope: b",
+            "fn": fn,
+            "skip": False,
+            "only": False,
+            "extensions": {},
+            "timeout": 3000,
+        },
     ]
     import asyncio
 
@@ -207,11 +219,11 @@ def _(t):
 
     result = asyncio.run(run_tests(tests, formatter=Fmt(), is_stop=is_stop))
     t.equal(ran, [])
-    t.equal(result['passed'], 0)
+    t.equal(result["passed"], 0)
     t.end()
 
 
-@test('run_tests: duplicate validation fails the test')
+@test("run_tests: duplicate validation fails the test")
 def _(t):
     from tapify.validator import reset_processed, set_validations
 
@@ -219,18 +231,39 @@ def _(t):
         t2.ok(True)
         t2.end()
 
-    set_validations({'check_duplicates': True, 'check_scopes': False,
-                     'check_assertions_count': False})
+    set_validations(
+        {"check_duplicates": True, "check_scopes": False, "check_assertions_count": False}
+    )
     reset_processed()
     tests = [
-        {'message': 'scope: dup', 'fn': fn, 'skip': False, 'only': False,
-         'extensions': {}, 'timeout': 3000,
-         'validations': {'check_duplicates': True, 'check_scopes': False,
-                         'check_assertions_count': False}},
-        {'message': 'scope: dup', 'fn': fn, 'skip': False, 'only': False,
-         'extensions': {}, 'timeout': 3000,
-         'validations': {'check_duplicates': True, 'check_scopes': False,
-                         'check_assertions_count': False}},
+        {
+            "message": "scope: dup",
+            "fn": fn,
+            "at": "file.py:1",
+            "skip": False,
+            "only": False,
+            "extensions": {},
+            "timeout": 3000,
+            "validations": {
+                "check_duplicates": True,
+                "check_scopes": False,
+                "check_assertions_count": False,
+            },
+        },
+        {
+            "message": "scope: dup",
+            "fn": fn,
+            "at": "file.py:1",
+            "skip": False,
+            "only": False,
+            "extensions": {},
+            "timeout": 3000,
+            "validations": {
+                "check_duplicates": True,
+                "check_scopes": False,
+                "check_assertions_count": False,
+            },
+        },
     ]
     import asyncio
 
@@ -240,6 +273,6 @@ def _(t):
 
     result = asyncio.run(run_tests(tests, formatter=Fmt()))
     reset_processed()
-    set_validations({'check_duplicates': False})
-    t.equal(result['failed'], 1)
+    set_validations({"check_duplicates": False})
+    t.equal(result["failed"], 1)
     t.end()

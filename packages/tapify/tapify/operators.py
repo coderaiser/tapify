@@ -39,7 +39,11 @@ def not_equal(result, expected, message="should not equal") -> dict:
     from tapify.diff import diff as _diff
 
     is_eq = result == expected and type(result) is type(expected)
-    output = "" if not is_eq else _diff(expected, result)
+    output = (
+        ""
+        if not is_eq
+        else (_diff(expected, result) or "    result: values are equal, but deepEqual")
+    )
     return {
         "is": not is_eq,
         "result": result,
@@ -118,6 +122,7 @@ _OPERATORS = {
     "deep_equal": deep_equal,
     "not_deep_equal": not_deep_equal,
     "pass": pass_,
+    "pass_": pass_,
     "fail": fail,
     "match": match,
     "not_match": not_match,
