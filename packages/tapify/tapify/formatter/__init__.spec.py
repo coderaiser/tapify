@@ -16,8 +16,7 @@ def _mod():
 @test("formatter: builtin name resolves")
 def _(t):
     harness, facade = create_formatter("tap")
-    t.ok(hasattr(harness, "write"))
-    t.ok(hasattr(facade, "emit"))
+    t.equal((hasattr(harness, "write"), hasattr(facade, "emit")), (True, True))
     t.end()
 
 

@@ -2,13 +2,7 @@ import os
 import shutil
 import sys
 
-_lines_store: list = []
-_current = ""
 _total_box: list = [0]
-
-
-def _lines() -> list:
-    return _lines_store
 
 
 class _Devnull:
@@ -59,43 +53,55 @@ def _color_fn(color: str):
     return lambda s: f"{prefix}{s}\x1b[39m" if prefix else s
 
 
-def _render_bar(count, done, color) -> str:
+def _render_bar(count, done, color, test="") -> str:
     width = shutil.get_terminal_size().columns
     bar_color = _color_fn(color)
-    percent = int(done * 100 / count) if count else 100
-    bar_width = max(width - 30, 10)
-    filled = int(bar_width * done / count) if count else bar_width
+    count = max(int(count or 0), 1)
+    done = min(max(int(done or 0), 0), count)
+    percent = int(done * 100 / count)
+    # cliProgress: bar fills the terminal minus the rendered payload
+    payload = f"{percent}% | 👌 | {done}/{count} | {test}"
+    bar_width = max(width - len(payload) - 2, 10)
+    filled = int(bar_width * done / count)
     bar = bar_color("█" * filled) + "░" * (bar_width - filled)
-    return f"{bar} {percent}% | {done}/{count}"
+    return f"{bar} {payload}"
 
 
 def create_formatter(color=None):
     """createFormatter() protocol — returns an object with formatter hooks."""
     color = color or os.environ.get("TAPIFY_PROGRESS_BAR_COLOR", "#f9d472")
     store: list = [""]
+    lines: list = []
+    current_test: list = [""]
+    done: list = [0]
 
     class _Formatter:
         @staticmethod
         def start(*, total=0, **_):
             _total_box[0] = total
-            _lines().clear()
-            _lines().append("TAP version 13")
+            done[0] = 0
+            lines.clear()
+            lines.append("TAP version 13")
             return None
 
         @staticmethod
         def test(*, test="", **_):
             store[0] = f"# {test}"
+            current_test[0] = test
             return None
 
         @staticmethod
         def test_end(*, count=0, total=0, **_):
+            del count
+            done[0] += 1
+            total = total or _total_box[0]
             stream = _get_stream(total)
-            stream.write("\r" + _render_bar(total, count, color))
+            stream.write("\r" + _render_bar(total, done[0], color, current_test[0]))
             return None
 
         @staticmethod
         def comment(*, message="", **_):
-            _lines().append(f"# {message}")
+            lines.append(f"# {message}")
             return None
 
         @staticmethod
@@ -132,12 +138,11 @@ def create_formatter(color=None):
             if show_stack:
                 out += ["    stack: |-", error_stack]
             out += ["  ...", ""]
-            _lines().append("\n".join(out))
+            lines.append("\n".join(out))
             return None
 
         @staticmethod
         def end(*, count=0, passed=0, failed=0, skipped=0, **_) -> str:
-            lines = _lines()
             lines.append("")
             lines.append(f"1..{count}")
             lines.append(f"# tests {count}")
@@ -149,9 +154,9 @@ def create_formatter(color=None):
                 lines.append(f"# ❌ fail {failed}")
             else:
                 lines.append(_format_ok())
-            lines += ["", ""]
+            lines.extend(["", ""])
             result = "\r" + "\n".join(lines)
-            _lines_store.clear()
+            lines.clear()
             return result
 
     return _Formatter()

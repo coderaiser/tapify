@@ -12,9 +12,10 @@ def _(t):
     sys.stdout.write("hello")
     restore()
     event, data = q.get_nowait()
-    t.equal(event, "console:log")
-    t.equal(data["message"], "hello")
-    t.equal(event, CONSOLE_LOG)
+    t.equal(
+        (event, data["message"], event == CONSOLE_LOG),
+        ("console:log", "hello", True),
+    )
     t.end()
 
 
@@ -24,6 +25,8 @@ def _(t):
     original = sys.stdout.write
     restore = override_stdout(q)
     restore()
-    t.equal(sys.stdout.write, original)
-    t.ok(len(SPLITTER) > 0)
+    t.equal(
+        (sys.stdout.write == original, len(SPLITTER) > 0),
+        (True, True),
+    )
     t.end()

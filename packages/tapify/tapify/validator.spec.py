@@ -1,5 +1,11 @@
 from tapify import test
-from tapify.validator import create_validator, get_at, reset_processed, set_validations
+from tapify.validator import (
+    create_validator,
+    get_at,
+    reset_processed,
+    reset_validations,
+    set_validations,
+)
 
 
 def _tests(*messages):
@@ -24,6 +30,7 @@ def _(t):
     )
     v = create_validator(tests=_tests("scope: x"))
     t.equal(v("scope: x", assertions_count=1), [])
+    reset_validations()
     t.end()
 
 
@@ -35,6 +42,7 @@ def _(t):
     v = create_validator(tests=_tests("scope: x"))
     msg, at = v("scope: x", assertions_count=0)
     t.match(msg, r"have none")
+    reset_validations()
     t.end()
 
 
@@ -46,6 +54,7 @@ def _(t):
     v = create_validator(tests=_tests("scope: x"))
     msg, at = v("scope: x", assertions_count=2)
     t.match(msg, r"have more")
+    reset_validations()
     t.end()
 
 
@@ -57,6 +66,7 @@ def _(t):
     v = create_validator(tests=_tests("no scope here"))
     msg, at = v("no scope here", assertions_count=1)
     t.match(msg, r"Scope should be defined")
+    reset_validations()
     t.end()
 
 
@@ -70,6 +80,7 @@ def _(t):
     result = v("scope: dup", assertions_count=1)
     t.ok(result, "first duplicate reported")
     reset_processed()
+    reset_validations()
     t.end()
 
 
@@ -85,6 +96,7 @@ def _(t):
     except RuntimeError:
         raised = True
     t.ok(raised)
+    reset_validations()
     t.end()
 
 
@@ -95,6 +107,7 @@ def _(t):
     )
     v = create_validator(tests=_tests("anything"))
     t.equal(v("anything", assertions_count=0), [])
+    reset_validations()
     t.end()
 
 

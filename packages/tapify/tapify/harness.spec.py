@@ -62,6 +62,5 @@ def _(t):
     h = Harness(_Mod(), buf1)
     h.pipe(buf2)
     h.write("start", {"total": 1})
-    t.equal(buf1.getvalue(), "")
-    t.equal(buf2.getvalue(), "start 1\n")
+    t.equal((buf1.getvalue(), buf2.getvalue()), ("", "start 1\n"))
     t.end()

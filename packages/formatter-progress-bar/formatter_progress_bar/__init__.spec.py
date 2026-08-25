@@ -129,7 +129,7 @@ def _(t):
         stream = fpb._get_stream(total=200)
         t.not_equal(stream, sys.stderr)
 
-    _with_env({"CI": "1"}, _inner)
+    _with_env({"CI": "1", "TAPIFY_PROGRESS_BAR": None}, _inner)
     t.end()
 
 

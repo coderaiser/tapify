@@ -54,8 +54,7 @@ def _(t):
         },
     ]
     result, events = _collect(tests)
-    t.equal(result["failed"], 1)
-    t.equal(result["passed"], 1)
+    t.equal((result["failed"], result["passed"]), (1, 1))
     t.end()
 
 
@@ -78,8 +77,7 @@ def _(t):
         }
     ]
     result, _ = _collect(tests)
-    t.equal(result["skipped"], 1)
-    t.equal(ran, [])
+    t.equal((result["skipped"], ran), (1, []))
     t.end()
 
 
@@ -108,8 +106,7 @@ def _(t):
         },
     ]
     result, _ = _collect(tests)
-    t.equal(result["passed"], 1)
-    t.equal(result["skipped"], 1)
+    t.equal((result["passed"], result["skipped"]), (1, 1))
     t.end()
 
 
@@ -218,14 +215,13 @@ def _(t):
         return True
 
     result = asyncio.run(run_tests(tests, formatter=Fmt(), is_stop=is_stop))
-    t.equal(ran, [])
-    t.equal(result["passed"], 0)
+    t.equal((ran, result["passed"]), ([], 0))
     t.end()
 
 
 @test("run_tests: duplicate validation fails the test")
 def _(t):
-    from tapify.validator import reset_processed, set_validations
+    from tapify.validator import reset_processed, reset_validations, set_validations
 
     def fn(t2):
         t2.ok(True)
@@ -275,4 +271,5 @@ def _(t):
     reset_processed()
     set_validations({"check_duplicates": False})
     t.equal(result["failed"], 1)
+    reset_validations()
     t.end()

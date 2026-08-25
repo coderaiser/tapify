@@ -1,5 +1,6 @@
 import io
 import os
+import re
 
 from tapify import test
 from tapify.worker import _exit_code, run_with_worker, run_without_worker
@@ -36,8 +37,7 @@ def _named(fn, name):
 def _(t):
     buf = io.StringIO()
     code = run_without_worker([_named(_pass, "scope: ok")], format_name="tap", stream=buf)
-    t.equal(code, 0)
-    t.match(buf.getvalue(), r"ok 1")
+    t.ok(code == 0 and bool(re.search(r"ok 1", buf.getvalue())))
     t.end()
 
 
@@ -49,13 +49,15 @@ def _(t):
     t.end()
 
 
-@test("worker: run_with_worker passes and streams output")
+@test("worker: run_with_worker passes")
 def _(t):
     buf = io.StringIO()
     code = run_with_worker([_named(_pass, "scope: ok")], format_name="tap", stream=buf)
-    t.equal(code, 0)
-    t.match(buf.getvalue(), r"TAP version 13")
-    t.match(buf.getvalue(), r"# ok")
+    value = buf.getvalue()
+    t.equal(
+        (code, "TAP version 13" in value, "# ok" in value),
+        (0, True, True),
+    )
     t.end()
 
 
@@ -63,21 +65,38 @@ def _(t):
 def _(t):
     buf = io.StringIO()
     code = run_with_worker([_named(_fail, "scope: bad")], format_name="tap", stream=buf)
-    t.equal(code, 1)
-    t.match(buf.getvalue(), r"not ok 1")
+    t.equal((code, "not ok 1" in buf.getvalue()), (1, True))
     t.end()
 
 
 @test("worker: _exit_code stop beats fail")
 def _(t):
     t.equal(_exit_code({"failed": 3}, lambda: True), 2)
+    t.end()
+
+
+@test("worker: _exit_code fail when no stop")
+def _(t):
     t.equal(_exit_code({"failed": 3}, None), 1)
+    t.end()
+
+
+@test("worker: _exit_code skipped when check enabled")
+def _(t):
     saved = os.environ.get("TAPIFY_CHECK_SKIPPED")
     os.environ["TAPIFY_CHECK_SKIPPED"] = "1"
-    t.equal(_exit_code({"failed": 0, "skipped": 2}, None), 5)
+    try:
+        code = _exit_code({"failed": 0, "skipped": 2}, None)
+    finally:
+        if saved is None:
+            os.environ.pop("TAPIFY_CHECK_SKIPPED", None)
+        else:
+            os.environ["TAPIFY_CHECK_SKIPPED"] = saved
+    t.equal(code, 5)
+    t.end()
+
+
+@test("worker: _exit_code ok otherwise")
+def _(t):
     t.equal(_exit_code({"failed": 0, "skipped": 0}, None), 0)
-    if saved is None:
-        os.environ.pop("TAPIFY_CHECK_SKIPPED", None)
-    else:
-        os.environ["TAPIFY_CHECK_SKIPPED"] = saved
     t.end()

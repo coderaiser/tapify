@@ -5,16 +5,24 @@ _SCOPE_RE = re.compile(r"^[\w\-/\d\s]+:.*")
 
 _processed: set[str] = set()
 
-_validations: dict = {
+_VALIDATIONS_DEFAULTS: dict = {
     "check_duplicates": True,
     "check_scopes": True,
     "check_assertions_count": True,
 }
 
+_validations: dict = dict(_VALIDATIONS_DEFAULTS)
+
 
 def set_validations(v: dict):
     """Called from __main__ after parsing CLI args."""
     _validations.update(v)
+
+
+def reset_validations():
+    """Restore default validations (used between spec tests)."""
+    _validations.clear()
+    _validations.update(_VALIDATIONS_DEFAULTS)
 
 
 def get_at() -> str:
@@ -79,7 +87,7 @@ def _check_duplicates(msg, entries, _assertions_count) -> list:
         return []
     if not _is_enabled(entries, "check_duplicates"):
         return []
-    at = entries[1]["at"]
+    at = entries[1].get("at", "")
     if msg in _processed:
         return []
     _processed.add(msg)
@@ -87,7 +95,7 @@ def _check_duplicates(msg, entries, _assertions_count) -> list:
 
 
 def _check_scopes(msg, entries, _assertions_count) -> list:
-    at = entries[0]["at"]
+    at = entries[0].get("at", "")
     if not _SCOPE_RE.match(msg):
         return [
             f"Scope should be defined before first colon: 'scope: subject', received: {msg!r}",
@@ -97,7 +105,7 @@ def _check_scopes(msg, entries, _assertions_count) -> list:
 
 
 def _check_assertions_count(msg, entries, assertions_count) -> list:
-    at = entries[0]["at"]
+    at = entries[0].get("at", "")
     if not _is_enabled(entries, "check_assertions_count"):
         return []
     if assertions_count > 1:

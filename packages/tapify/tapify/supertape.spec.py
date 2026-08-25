@@ -15,8 +15,7 @@ def _(t):
 @test("supertape: create_test isolates tests")
 def _(t):
     t_fn, buf, run = create_test(format="tap", stream=io.StringIO())
-    t.ok(callable(t_fn))
-    t.ok(callable(run))
+    t.equal((callable(t_fn), callable(run)), (True, True))
     t.end()
 
 
@@ -102,9 +101,22 @@ def _(t):
 
     fake_t = type("T", (), {"ok": staticmethod(lambda v: None)})()
     result = fn(fake_t)
-    t.equal(calls, ["x"])
-    t.ok(result is not None)
-    t.equal(fn.__tapify_stub__["ok"].__name__, "<lambda>")
+    t.equal(
+        (calls, result is not None, fn.__tapify_stub__["ok"].__name__),
+        (["x"], True, "<lambda>"),
+    )
+    t.end()
+
+
+@test("supertape: stub returns wrapped function result")
+def _(t):
+    @stub({"ok": lambda ok, value: None})
+    def fn(t):
+        t.ok("x")
+        return "done"
+
+    fake_t = type("T", (), {"ok": staticmethod(lambda v: None)})()
+    t.equal(fn(fake_t), "done")
     t.end()
 
 
@@ -127,10 +139,24 @@ def _(t):
     supertape.test.skip("scope: skipped-global")(fn)
     supertape.test.only("scope: only-global")(fn)
     messages = [entry["message"] for entry in supertape._tests]
-    t.ok("scope: skipped-global" in messages)
-    t.ok("scope: only-global" in messages)
     only_entry = [e for e in supertape._tests if e["message"] == "scope: only-global"][0]
-    t.ok(only_entry["only"])
+    t.equal(
+        ("scope: skipped-global" in messages, only_entry["only"]),
+        (True, True),
+    )
+    supertape.reset()
+    t.end()
+
+
+@test("supertape: reset clears registered tests")
+def _(t):
+    from tapify import supertape
+
+    def fn(t2):
+        t2.ok(True)
+        t2.end()
+
+    supertape.test.skip("scope: skipped-global")(fn)
     supertape.reset()
     t.equal(supertape._tests, [])
     t.end()
@@ -150,8 +176,7 @@ def _(t):
         t2.end()
 
     result = supertape.run()
-    t.equal(result["failed"], 0)
-    t.match(buf.getvalue(), r"ok 1")
+    t.equal((result["failed"], "ok 1" in buf.getvalue()), (0, True))
     supertape.reset()
     t.end()
 

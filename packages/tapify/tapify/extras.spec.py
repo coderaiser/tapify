@@ -4,6 +4,7 @@ extension/stub edge cases, progress-bar color paths, emitter timer."""
 import io
 import os
 import pathlib
+import re
 import sys
 import tempfile
 import time
@@ -15,7 +16,12 @@ from tapify.formatter.harness import Harness
 from tapify.maybe_once import disable_once, enable_once
 from tapify.operators import _OPERATORS, deep_equal, init_operators, not_deep_equal
 from tapify.operators import end as op_end
-from tapify.validator import create_validator, reset_processed, set_validations
+from tapify.validator import (
+    create_validator,
+    reset_processed,
+    reset_validations,
+    set_validations,
+)
 
 
 def _write_spec(body) -> str:
@@ -179,6 +185,7 @@ def _(t):
     v = create_validator(tests=tests)
     t.equal(v("scope: d", assertions_count=1), [])
     set_validations({"check_duplicates": False})
+    reset_validations()
     t.end()
 
 
@@ -208,18 +215,21 @@ def _(t):
     finally:
         _OPERATORS["ok"] = orig
     event, data = events[0]
-    t.equal(event, "fail")
-    t.match(str(data["message"]), r"returns nothing")
+    result = (event, "returns nothing" in str(data["message"]))
+    t.equal(result, ("fail", True))
     t.end()
 
 
 @test("extras: pure operators edge cases")
 def _(t):
-    t.not_ok(deep_equal(1, True)["is"])
-    t.ok(not_deep_equal(1, True)["is"])
-    t.ok(not_deep_equal({"a": 1}, {"a": 2})["is"])
-    t.not_ok(not_deep_equal({"a": 1}, {"a": 1})["is"])
-    t.equal(op_end(), {})
+    results = (
+        bool(deep_equal(1, True)["is"]),
+        bool(not_deep_equal(1, True)["is"]),
+        bool(not_deep_equal({"a": 1}, {"a": 2})["is"]),
+        bool(not_deep_equal({"a": 1}, {"a": 1})["is"]),
+        op_end(),
+    )
+    t.equal(results, (False, True, True, False, {}))
     t.end()
 
 
@@ -235,8 +245,8 @@ def _(t):
         t2.end()
 
     run()
-    t.match(buf.getvalue(), r"1\.\.0")  # noop extension emits nothing
-    t.match(buf.getvalue(), r"# ok")
+    out = buf.getvalue()
+    t.equal(("1..0" in out, "# ok" in out), (True, True))  # noop emits nothing
     t.end()
 
 
@@ -258,8 +268,7 @@ def _(t):
 
     run()
     out = buf.getvalue()
-    t.match(out, r"# skip 1")
-    t.match(out, r"ok 1")
+    t.equal(("# skip 1" in out, "ok 1" in out), (True, True))
     t.end()
 
 
@@ -279,9 +288,12 @@ def _(t):
         t2.end()
 
     messages = {e["message"]: e for e in supertape._tests}
-    t.ok(messages["scope: gs"]["skip"])
-    t.ok(messages["scope: go"]["only"])
-    t.ok(messages["scope: go"]["extensions"])
+    result = (
+        bool(messages["scope: gs"]["skip"]),
+        bool(messages["scope: go"]["only"]),
+        bool(messages["scope: go"]["extensions"]),
+    )
+    t.equal(result, (True, True, True))
     supertape.reset()
     t.end()
 
@@ -302,12 +314,11 @@ def _(t):
         "T", (), {"ok": staticmethod(lambda v: None), "mystery": lambda self: seen.append("myst")}
     )()
     result = fn(fake_t)
-    t.equal(seen, ["x", "myst"])
-    t.equal(result, "done")
+    t.equal((seen, result), (["x", "myst"], "done"))
     t.end()
 
 
-@test("extras: direct registration forms")
+@test("extras: direct registration form")
 def _(t):
     supertape.reset()
 
@@ -318,6 +329,16 @@ def _(t):
     supertape.test("scope: direct", fn)
     t.equal(supertape._tests[-1]["message"], "scope: direct")
     supertape.reset()
+    t.end()
+
+
+@test("extras: positional registration form")
+def _(t):
+    supertape.reset()
+
+    def fn(t2):
+        t2.ok(True)
+        t2.end()
 
     buf = io.StringIO()
     t_fn, _, run = supertape.create_test(format="tap", stream=buf)
@@ -391,8 +412,7 @@ def _(t):
         format_name="tap",
         stream=buf,
     )
-    t.equal(code, 0)
-    t.match(buf.getvalue(), r"hello-from-test")
+    t.ok(code == 0 and bool(re.search(r"hello-from-test", buf.getvalue())))
     t.end()
 
 
@@ -407,12 +427,17 @@ def _(t):
     orig = sys.stderr
     sys.stderr = FakeErr()
     try:
-        colored = fpb._color_fn("#ff0000")("x")
-        t.match(colored, r"\x1b\[38;2;255;0;0m")
-        t.match(fpb._color_fn("red")("y"), r"\x1b\[31my")
-        t.equal(fpb._color_fn("chartreuse")("z"), "z")
+        results = (
+            fpb._color_fn("#ff0000")("x"),
+            fpb._color_fn("red")("y"),
+            fpb._color_fn("chartreuse")("z"),
+        )
     finally:
         sys.stderr = orig
+    t.equal(
+        results,
+        ("\x1b[38;2;255;0;0mx\x1b[39m", "\x1b[31my\x1b[39m", "z"),
+    )
     t.end()
 
 
@@ -423,8 +448,7 @@ def _(t):
     out = formatter_tap.fail(
         count=3, message="m", operator="equal", expected=1, result=2, output=""
     )
-    t.match(out, r"expected: \|-")
-    t.match(out, r"      1")
+    t.ok(bool(re.search(r"expected: \|-", out)) and "      1" in out)
     t.end()
 
 
@@ -435,8 +459,7 @@ def _(t):
     out = formatter_tap.fail(
         count=3, message="m", operator="equal", output="      diff: |-\n        - 1"
     )
-    t.match(out, r"diff: \|-")
-    t.not_match(out, r"expected: \|-")
+    t.ok("diff: |-" in out and "expected: |-" not in out)
     t.end()
 
 
@@ -512,6 +535,7 @@ def _(t):
     v = create_validator(tests=tests)
     t.equal(v("scope: many", assertions_count=5), [])
     set_validations({"check_assertions_count": False})
+    reset_validations()
     t.end()
 
 
@@ -535,10 +559,9 @@ def _(t):
                 else:
                     os.environ[k] = v
 
-    s = stream_for({"TAPIFY_PROGRESS_BAR": "0"})
-    t.not_equal(s, sys.stderr)
-    s = stream_for({"TAPIFY_PROGRESS_BAR": "1"})
-    t.equal(s, sys.stderr)
+    s0 = stream_for({"TAPIFY_PROGRESS_BAR": "0"})
+    s1 = stream_for({"TAPIFY_PROGRESS_BAR": "1"})
+    t.ok(s0 is not sys.stderr and s1 is sys.stderr)
     t.end()
 
 
@@ -569,8 +592,7 @@ def _(t):
     ext = supertape.test.extend({"pos": lambda ops: lambda x: ops["ok"](x > 0)})
     ext("scope: gdirect", fn)
     messages = [e["message"] for e in supertape._tests]
-    t.ok("scope: gdirect" in messages)
-    t.ok(supertape._tests[-1]["extensions"])
+    t.ok("scope: gdirect" in messages and bool(supertape._tests[-1]["extensions"]))
     supertape.reset()
     t.end()
 

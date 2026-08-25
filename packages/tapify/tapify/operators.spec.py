@@ -75,9 +75,14 @@ def _(t):
     t.end()
 
 
-@test("operators: not_match inverts match")
+@test("operators: not_match inverts match: non-matching pattern passes")
 def _(t):
     t.ok(not_match("hello", r"world")["is"])
+    t.end()
+
+
+@test("operators: not_match inverts match: matching pattern fails")
+def _(t):
     t.not_ok(not_match("hello world", r"world")["is"])
     t.end()
 
@@ -133,9 +138,10 @@ def _(t):
     ops = init_operators(state)
     ops.ok(False)
     event, data = events[0]
-    t.equal(event, "fail")
-    t.ok("at" in data)
-    t.ok(data["error_stack"])
+    t.equal(
+        (event, "at" in data, bool(data["error_stack"])),
+        ("fail", True, True),
+    )
     t.end()
 
 
@@ -146,8 +152,10 @@ def _(t):
     ops.end()
     ops.end()
     fails = [e for e in events if e[0] == "fail"]
-    t.equal(len(fails), 1)
-    t.match(str(fails[0][1]["message"]), r"couple")
+    t.equal(
+        (len(fails), "couple" in str(fails[0][1]["message"])),
+        (1, True),
+    )
     t.end()
 
 
@@ -158,8 +166,10 @@ def _(t):
     ops.end()
     ops.ok(True)
     fails = [e for e in events if e[0] == "fail"]
-    t.equal(len(fails), 1)
-    t.match(str(fails[0][1]["message"]), r"after")
+    t.equal(
+        (len(fails), "after" in str(fails[0][1]["message"])),
+        (1, True),
+    )
     t.end()
 
 
@@ -168,8 +178,7 @@ def _(t):
     state, events = _state()
     ops = init_operators(state)
     ops.pass_("all good")
-    t.equal(events[0][0], "success")
-    t.equal(events[0][1]["message"], "all good")
+    t.equal((events[0][0], events[0][1]["message"]), ("success", "all good"))
     t.end()
 
 
@@ -177,9 +186,14 @@ def _(t):
 def _(t):
     from tapify.operators import not_equal
 
-    t.ok(not_equal(1, 2)["is"])
-    t.not_ok(not_equal(1, 1)["is"])
-    t.ok(bool(not_equal(1, 1)["output"]))
+    t.equal(
+        (
+            not_equal(1, 2)["is"],
+            not_equal(1, 1)["is"],
+            bool(not_equal(1, 1)["output"]),
+        ),
+        (True, False, True),
+    )
     t.end()
 
 
