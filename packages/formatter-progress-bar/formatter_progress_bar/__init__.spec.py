@@ -210,3 +210,25 @@ def _(t):
 def _(t):
     t.equal(fpb.create_formatter().comment(message="note"), "# note\n")
     t.end()
+
+
+@test("formatter_progress_bar: devnull swallows writes")
+def _(t):
+    t.equal(fpb._devnull().write("ignored"), None)
+    t.end()
+
+
+@test("formatter_progress_bar: end does not write to stderr directly")
+def _(t):
+    captured = io.StringIO()
+    orig = sys.stderr
+    sys.stderr = captured
+    try:
+        fmt = fpb.create_formatter("#f9d472")
+        fmt.start(total=1)
+        out = fmt.end(count=1, passed=1, failed=0, skipped=0)
+    finally:
+        sys.stderr = orig
+    # output is returned for the harness to write — never written twice
+    t.ok(out.startswith("\r") and captured.getvalue() == "")
+    t.end()

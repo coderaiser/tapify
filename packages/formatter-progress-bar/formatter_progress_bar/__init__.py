@@ -4,7 +4,6 @@ import sys
 
 _lines_store: list = []
 _current = ""
-_stream_box: list = [None]
 _total_box: list = [0]
 
 
@@ -78,13 +77,10 @@ def global_current(name):
 def create_formatter(color=None):
     """createFormatter() protocol — returns an object with formatter hooks."""
     color = color or os.environ.get("TAPIFY_PROGRESS_BAR_COLOR", "#f9d472")
-    ci = bool(os.environ.get("CI"))
-    stream = sys.stdout if ci else _get_stream()
 
     class _Formatter:
         @staticmethod
         def start(*, total=0, **_):
-            _stream_box[0] = stream
             _total_box[0] = total
             _lines().clear()
             return None
@@ -173,8 +169,6 @@ def create_formatter(color=None):
             else:
                 lines.append(_format_ok())
             result = "\r" + "\n".join(lines) + "\n"
-            if stream is not None and not ci:
-                stream.write(result)
             _lines_store.clear()
             return result
 
