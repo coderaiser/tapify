@@ -33,6 +33,38 @@ def _(t):
     t.end()
 
 
+@test("format: parse_at picks first user frame in python stack")
+def _(t):
+    from tapify.format import parse_at
+
+    stack = "\n".join(
+        [
+            '  File "/usr/lib/python3.12/threading.py", line 1030, in _bootstrap',
+            "    self._bootstrap_inner()",
+            '  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 92, in run',
+            "    work_item.run()",
+            '  File "/tmp/st/demo.spec.py", line 12, in _',
+            "    t.equal(1, 2)",
+        ]
+    )
+    t.equal(parse_at(stack), "at /tmp/st/demo.spec.py:12")
+    t.end()
+
+
+@test("format: parse_at skips frozen frames")
+def _(t):
+    from tapify.format import parse_at
+
+    stack = "\n".join(
+        [
+            '  File "<frozen importlib._bootstrap>", line 488, in _gcd_import',
+            '  File "/tmp/st/user.spec.py", line 7, in _',
+        ]
+    )
+    t.equal(parse_at(stack), "at /tmp/st/user.spec.py:7")
+    t.end()
+
+
 @test("format: parse_at raises for short multi-line stacks")
 def _(t):
     from tapify.format import parse_at

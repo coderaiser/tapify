@@ -48,6 +48,17 @@ def _(t):
     t.end()
 
 
+@test("diff: pad_marker adds space after -/+ but not context")
+def _(t):
+    from tapify.diff import _pad_marker
+
+    t.equal(
+        (_pad_marker("-1"), _pad_marker("+2"), _pad_marker(" 3"), _pad_marker("--- x")),
+        ("- 1", "+ 2", " 3", "--- x"),
+    )
+    t.end()
+
+
 @test("diff: header-only chunks return empty string")
 def _(t):
     import tapify.diff as d

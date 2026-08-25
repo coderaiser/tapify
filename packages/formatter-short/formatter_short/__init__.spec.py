@@ -36,3 +36,29 @@ def _(t):
     out = _run({"scope: good": good})
     t.match(out, r"ok 1 should be truthy")
     t.end()
+
+
+@test("formatter_short: custom output replaces yaml block")
+def _(t):
+    result = formatter_short.fail(
+        at="at a.py:1",
+        count=1,
+        message="boom",
+        operator="equal",
+        result=1,
+        expected=2,
+        output="      diff: |-",
+    )
+    expected = "\n".join(
+        [
+            "not ok 1 boom",
+            "  ---",
+            "    operator: equal",
+            "      diff: |-",
+            "    at a.py:1",
+            "  ...",
+            "",
+        ]
+    )
+    t.equal(result, expected + "\n")
+    t.end()

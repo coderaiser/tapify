@@ -50,14 +50,14 @@ def fail(
     _buf().append(
         _j(
             {
-                "result": result,
-                "count": count,
-                "expected": expected,
-                "message": message,
-                "operator": operator,
                 "test": _current,
                 "at": at,
-                "error_stack": error_stack,
+                "count": count,
+                "message": message,
+                "operator": operator,
+                "result": result,
+                "expected": expected,
+                "errorStack": error_stack,
                 "output": output,
             }
         )

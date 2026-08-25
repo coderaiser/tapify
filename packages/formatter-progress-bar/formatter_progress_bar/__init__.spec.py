@@ -71,7 +71,18 @@ def _(t):
     t.end()
 
 
-@test("formatter_progress_bar: success shows ok emoji")
+@test("formatter_progress_bar: passing tests print no per-test line")
+def _(t):
+    def fn(t2):
+        t2.ok(True)
+        t2.end()
+
+    result = _run({"scope: x": fn}, env={"CI": "1"})
+    t.not_match(result, r"^ok 1")
+    t.end()
+
+
+@test("formatter_progress_bar: all-pass end shows ok emoji")
 def _(t):
     def fn(t2):
         t2.ok(True)
@@ -154,26 +165,32 @@ def _(t):
 @test("formatter_progress_bar: create_formatter protocol works")
 def _(t):
     formatter = fpb.create_formatter("#ff0000")
-    formatter.start(total=2)
-    formatter.test(test="scope: bar")
-    formatter.success(count=1, message="ok msg")
+    formatter.start(total=1)
     out = formatter.end(count=1, passed=1, failed=0, skipped=0)
-    t.ok(out.startswith("\r") and "ok msg" in out)
+    t.ok(out.startswith("\r") and "TAP version 13" in out)
     t.end()
 
 
 @test("formatter_progress_bar: non-CI bar renders and buffers")
 def _(t):
-    saved = {k: os.environ.get(k) for k in ("CI",)}
+    saved = {k: os.environ.get(k) for k in ("CI", "TAPIFY_PROGRESS_BAR")}
     os.environ.pop("CI", None)
+    os.environ["TAPIFY_PROGRESS_BAR"] = "1"
+    captured = io.StringIO()
+    orig_stderr = sys.stderr
+    sys.stderr = captured
     try:
         fmt = fpb.create_formatter("#f9d472")
-        fmt.start(total=3)
+        fmt.start(total=1)
         fmt.test(test="scope: bar")
-        fmt.success(count=1, message="good thing")
+
+        def bad(t2):
+            t2.ok(False)
+            t2.end()
+
         fmt.fail(
-            at="file.py:1",
-            count=2,
+            at="at file.py:1",
+            count=1,
             message="bad thing",
             operator="ok",
             result=False,
@@ -181,12 +198,14 @@ def _(t):
             output="",
             error_stack="stack here",
         )
-        out = fmt.end(count=3, passed=2, failed=1, skipped=1)
-        ok = out.startswith("\r") and all(
-            re.search(p, out) for p in (r"█", r"good thing", r"bad thing", r"⚠️ skip", r"# fail 1")
+        fmt.test_end(count=1, total=1)
+        out = fmt.end(count=1, passed=0, failed=1, skipped=1)
+        ok = all(
+            re.search(p, out) for p in (r"# scope: bar", r"bad thing", r"⚠️ skip 1", r"# ❌ fail 1")
         )
-        t.ok(ok)
+        t.ok(ok and captured.getvalue().startswith("\r") and "█" in captured.getvalue())
     finally:
+        sys.stderr = orig_stderr
         for k, v in saved.items():
             if v is None:
                 os.environ.pop(k, None)
@@ -206,9 +225,13 @@ def _(t):
     t.end()
 
 
-@test("formatter_progress_bar: comment returns text")
+@test("formatter_progress_bar: comment is buffered")
 def _(t):
-    t.equal(fpb.create_formatter().comment(message="note"), "# note\n")
+    fmt = fpb.create_formatter()
+    fmt.start(total=1)
+    result = fmt.comment(message="note")
+    out = fmt.end(count=1, passed=1, failed=0, skipped=0)
+    t.ok(result is None and "# note" in out)
     t.end()
 
 

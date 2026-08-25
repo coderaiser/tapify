@@ -69,46 +69,33 @@ def _render_bar(count, done, color) -> str:
     return f"{bar} {percent}% | {done}/{count}"
 
 
-def global_current(name):
-    global _current
-    _current = name
-
-
 def create_formatter(color=None):
     """createFormatter() protocol — returns an object with formatter hooks."""
     color = color or os.environ.get("TAPIFY_PROGRESS_BAR_COLOR", "#f9d472")
+    store: list = [""]
 
     class _Formatter:
         @staticmethod
         def start(*, total=0, **_):
             _total_box[0] = total
             _lines().clear()
+            _lines().append("TAP version 13")
             return None
 
         @staticmethod
         def test(*, test="", **_):
-            global_current(test)
-            lines = _lines()
-            if bool(os.environ.get("CI")):
-                lines.append(f"# {test}")
+            store[0] = f"# {test}"
             return None
 
         @staticmethod
-        def test_end(**_):
+        def test_end(*, count=0, total=0, **_):
+            stream = _get_stream(total)
+            stream.write("\r" + _render_bar(total, count, color))
             return None
 
         @staticmethod
         def comment(*, message="", **_):
-            return f"# {message}\n"
-
-        @staticmethod
-        def success(*, count=0, message="", **_):
-            line = (
-                _format_ok() + f" {count} {message}"
-                if not bool(os.environ.get("CI"))
-                else f"✅ ok {count} {message}"
-            )
-            _lines().append(line)
+            _lines().append(f"# {message}")
             return None
 
         @staticmethod
@@ -122,13 +109,12 @@ def create_formatter(color=None):
             expected=None,
             output="",
             error_stack="",
-            test="",
             **_,
         ):
             show_stack = os.environ.get("TAPIFY_PROGRESS_BAR_STACK", "1") != "0"
-            name = test or _current
             out = [
-                f"# {name}",
+                "",
+                store[0],
                 f"❌ not ok {count} {message}",
                 "  ---",
                 f"    operator: {operator}",
@@ -145,30 +131,26 @@ def create_formatter(color=None):
             out += [f"    {at}"]
             if show_stack:
                 out += ["    stack: |-", error_stack]
-            out += ["  ..."]
+            out += ["  ...", ""]
             _lines().append("\n".join(out))
             return None
 
         @staticmethod
         def end(*, count=0, passed=0, failed=0, skipped=0, **_) -> str:
-            lines = []
-            ci = bool(os.environ.get("CI"))
-            if ci:
-                lines.append("TAP version 13")
-                lines.extend(_lines())
-                lines.append(f"1..{count}")
-            else:
-                lines.append(_render_bar(count, count - failed, color))
-                lines.extend(_lines())
-            for _ in range(skipped):
-                lines.append("# ⚠️ skip")
+            lines = _lines()
+            lines.append("")
+            lines.append(f"1..{count}")
+            lines.append(f"# tests {count}")
+            lines.append(f"# pass {passed}")
+            if skipped:
+                lines.append(f"# ⚠️ skip {skipped}")
+            lines.append("")
             if failed:
-                lines.append(f"# fail {failed}")
-            elif ci:
-                lines.append("# ✅ ok")
+                lines.append(f"# ❌ fail {failed}")
             else:
                 lines.append(_format_ok())
-            result = "\r" + "\n".join(lines) + "\n"
+            lines += ["", ""]
+            result = "\r" + "\n".join(lines)
             _lines_store.clear()
             return result
 

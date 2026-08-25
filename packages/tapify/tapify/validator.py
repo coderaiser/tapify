@@ -18,8 +18,8 @@ def set_validations(v: dict):
 
 
 def get_at() -> str:
-    """Walk the Python call stack, skip tapify frames,
-    return 'filename:lineno' of the first user frame."""
+    """Walk the Python call stack, skip runner/internal frames,
+    return 'at filename:lineno' of the first user frame."""
     frames = traceback.extract_stack()
     for frame in reversed(frames[:-1]):
         if frame.filename.startswith("<"):
@@ -28,8 +28,26 @@ def get_at() -> str:
             continue
         if "site-packages" in frame.filename:
             continue
-        return f"{frame.filename}:{frame.lineno}"
-    return frames[-1].filename + ":" + str(frames[-1].lineno)
+        if _is_internal(frame.filename):
+            continue
+        return f"at {frame.filename}:{frame.lineno}"
+    last = frames[-1]
+    return f"at {last.filename}:{last.lineno}"
+
+
+_INTERNAL_DIRS = (
+    "threading.py",
+    "concurrent/",
+    "asyncio/",
+    "multiprocessing/",
+    "queue.py",
+    "runpy.py",
+    "importlib/",
+)
+
+
+def _is_internal(filename: str) -> bool:
+    return any(part in filename for part in _INTERNAL_DIRS)
 
 
 def create_validator(*, tests: list):

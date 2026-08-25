@@ -119,7 +119,7 @@ def _(t):
     ]
     with mock.patch("tapify.validator.traceback.extract_stack", return_value=frames):
         at = get_at()
-    t.equal(at, "user.py:42")
+    t.equal(at, "at user.py:42")
     t.end()
 
 
@@ -133,7 +133,25 @@ def _(t):
     ]
     with mock.patch("tapify.validator.traceback.extract_stack", return_value=frames):
         at = get_at()
-    t.equal(at, "user.py:42")
+    t.equal(at, "at user.py:42")
+    t.end()
+
+
+@test("extras: get_at skips threading internals")
+def _(t):
+    from tapify.validator import get_at
+
+    frames = [
+        mock.Mock(filename="/usr/lib/python3.12/threading.py", lineno=1030),
+        mock.Mock(
+            filename="/usr/lib/python3.12/concurrent/futures/thread.py",
+            lineno=92,
+        ),
+        mock.Mock(filename="user.py", lineno=42),
+    ]
+    with mock.patch("tapify.validator.traceback.extract_stack", return_value=frames):
+        at = get_at()
+    t.equal(at, "at user.py:42")
     t.end()
 
 
@@ -144,7 +162,7 @@ def _(t):
     only_tapify = [mock.Mock(filename="x/tapify/y.py", lineno=7)]
     with mock.patch("tapify.validator.traceback.extract_stack", return_value=only_tapify):
         at = get_at()
-    t.match(at, r"y\.py:7$")
+    t.match(at, r"at x/tapify/y\.py:7$")
     t.end()
 
 
@@ -532,10 +550,8 @@ def _(t):
     try:
         fmt = fpb.create_formatter()
         fmt.start(total=1)
-        fmt.success(count=1, message="nice")
         out = fmt.end(count=1, passed=1, failed=0, skipped=0)
-        t.match(out, r"nice")
-        t.not_match(out, r"# fail")
+        t.ok("# ✅ ok" in out and "# fail" not in out)
     finally:
         if saved is not None:
             os.environ["CI"] = saved
@@ -588,9 +604,8 @@ def _(t):
     try:
         fmt = fpb.create_formatter()
         fmt.start(total=1)
-        fmt.success(count=1, message="ci-ok")
         out = fmt.end(count=1, passed=1, failed=0, skipped=0)
-        t.match(out, r"# ✅ ok")
+        t.ok("# ✅ ok" in out)
     finally:
         if saved is None:
             os.environ.pop("CI", None)
