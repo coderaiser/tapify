@@ -3,6 +3,20 @@ import shutil
 import sys
 
 _total_box: list = [0]
+_last_render_box: list = []
+
+OK = "👌"
+
+
+def _last_render() -> list:
+    return list(_last_render_box)
+
+
+def bar_color_red(count: int) -> str:
+    """red(failed) like chalk.red in supertape's formatErrorsCount."""
+    if sys.stderr.isatty():
+        return f"\x1b[31m{count}\x1b[39m"
+    return str(count)
 
 
 class _Devnull:
@@ -53,15 +67,24 @@ def _color_fn(color: str):
     return lambda s: f"{prefix}{s}\x1b[39m" if prefix else s
 
 
-def _render_bar(count, done, color, test="") -> str:
+def _visible_len(s: str) -> int:
+    """Display width of s — wide/emoji chars take 2 terminal columns."""
+    import unicodedata
+
+    return sum(2 if unicodedata.east_asian_width(c) in "WF" or ord(c) > 0xFFFF else 1 for c in s)
+
+
+def _render_bar(count, done, color, test="", failed=0) -> str:
     width = shutil.get_terminal_size().columns
     bar_color = _color_fn(color)
     count = max(int(count or 0), 1)
     done = min(max(int(done or 0), 0), count)
     percent = int(done * 100 / count)
-    # cliProgress: bar fills the terminal minus the rendered payload
-    payload = f"{percent}% | 👌 | {done}/{count} | {test}"
-    bar_width = max(width - len(payload) - 2, 10)
+    # cliProgress: bar fills the terminal minus the rendered payload;
+    # failed shows a red error count, 👌 when the current test passes
+    failed_part = bar_color_red(failed) if failed else OK
+    payload = f"{percent}% | {failed_part} | {done}/{count} | {test}"
+    bar_width = max(width - _visible_len(payload) - 2, 10)
     filled = int(bar_width * done / count)
     bar = bar_color("█" * filled) + "░" * (bar_width - filled)
     return f"{bar} {payload}"
@@ -74,13 +97,16 @@ def create_formatter(color=None):
     lines: list = []
     current_test: list = [""]
     done: list = [0]
+    fails: list = [0]
 
     class _Formatter:
         @staticmethod
         def start(*, total=0, **_):
             _total_box[0] = total
             done[0] = 0
+            fails[0] = 0
             lines.clear()
+            _last_render_box.clear()
             lines.append("TAP version 13")
             return None
 
@@ -88,6 +114,7 @@ def create_formatter(color=None):
         def test(*, test="", **_):
             store[0] = f"# {test}"
             current_test[0] = test
+            fails[0] = 0
             return None
 
         @staticmethod
@@ -96,7 +123,9 @@ def create_formatter(color=None):
             done[0] += 1
             total = total or _total_box[0]
             stream = _get_stream(total)
-            stream.write("\r" + _render_bar(total, done[0], color, current_test[0]))
+            rendered = _render_bar(total, done[0], color, current_test[0], fails[0])
+            _last_render_box.append(rendered)
+            stream.write("\r" + rendered)
             return None
 
         @staticmethod
@@ -125,6 +154,7 @@ def create_formatter(color=None):
                 "  ---",
                 f"    operator: {operator}",
             ]
+            fails[0] += 1
             if output:
                 out.append(output)
             else:

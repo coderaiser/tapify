@@ -255,3 +255,135 @@ def _(t):
     # output is returned for the harness to write — never written twice
     t.ok(out.startswith("\r") and captured.getvalue() == "")
     t.end()
+
+
+@test("formatter_progress_bar: payload looks like supertape cliProgress format")
+def _(t):
+    rendered = fpb._render_bar(10, 4, "#f9d472", "scope: x")
+    t.match(rendered, r"40% | 👌 | 4/10 | scope: x")
+    t.end()
+
+
+@test("formatter_progress_bar: payload shows failed count after failure")
+def _(t):
+    fmt = fpb.create_formatter()
+    fmt.start(total=1)
+    fmt.test(test="scope: bad")
+    fmt.fail(at="", count=1, message="m", operator="ok", result=False, expected=True)
+    fmt.test_end(count=1, total=1)
+    rendered = fpb._last_render()[0]
+    t.match(rendered, r" \| 1 \| 1/1 \| scope: bad")
+    t.end()
+
+
+@test("formatter_progress_bar: no 👌 after failure")
+def _(t):
+    fmt = fpb.create_formatter()
+    fmt.start(total=1)
+    fmt.test(test="scope: bad")
+    fmt.fail(at="", count=1, message="m", operator="ok", result=False, expected=True)
+    fmt.test_end(count=1, total=1)
+    rendered = fpb._last_render()[0]
+    t.not_match(rendered, r"👌")
+    t.end()
+
+
+@test("formatter_progress_bar: failed count resets on next test")
+def _(t):
+    fmt = fpb.create_formatter()
+    fmt.start(total=2)
+    fmt.test(test="a")
+    fmt.fail(at="", count=1, message="m", operator="ok", result=False, expected=True)
+    fmt.test_end(count=1, total=2)
+    fmt.test(test="b")
+    fmt.test_end(count=2, total=2)
+    first = fpb._last_render()[0]
+    t.not_match(first, r"👌")
+    t.end()
+
+
+@test("formatter_progress_bar: 👌 returns on passing test")
+def _(t):
+    fmt = fpb.create_formatter()
+    fmt.start(total=2)
+    fmt.test(test="a")
+    fmt.fail(at="", count=1, message="m", operator="ok", result=False, expected=True)
+    fmt.test_end(count=1, total=2)
+    fmt.test(test="b")
+    fmt.test_end(count=2, total=2)
+    second = fpb._last_render()[1]
+    t.match(second, r"\| 👌 \|")
+    t.end()
+
+
+@test("formatter_progress_bar: red count is colored on a tty")
+def _(t):
+    class _Tty(io.StringIO):
+        def isatty(self):
+            return True
+
+    orig = sys.stderr
+    sys.stderr = _Tty()
+    try:
+        colored = fpb.bar_color_red(3)
+    finally:
+        sys.stderr = orig
+    t.equal(colored, "\x1b[31m3\x1b[39m")
+    t.end()
+
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+@test("formatter_progress_bar: _visible_len counts wide chars as 2 columns")
+def _(t):
+    t.equal(fpb._visible_len("a👌b"), 4)
+    t.end()
+
+
+@test("formatter_progress_bar: rendered bar fits in one terminal line")
+def _(t):
+    import shutil
+
+    columns = shutil.get_terminal_size().columns
+    rendered = fpb._render_bar(10, 4, "#f9d472", "scope: x")
+    visible = fpb._visible_len(_ANSI_RE.sub("", rendered))
+    t.ok(visible < columns)
+    t.end()
+
+
+@test("formatter_progress_bar: consecutive renders stay on one line")
+def _(t):
+    fmt = fpb.create_formatter()
+    fmt.start(total=10)
+    writes = []
+
+    class _Stream:
+        def write(self, s):
+            writes.append(s)
+
+        def isatty(self):
+            return False
+
+        def flush(self):
+            return None
+
+    import os as _os
+
+    saved = _os.environ.get("TAPIFY_PROGRESS_BAR")
+    _os.environ["TAPIFY_PROGRESS_BAR"] = "1"
+    orig_stderr = sys.stderr
+    sys.stderr = _Stream()
+    try:
+        for i in range(1, 11):
+            fmt.test(test=f"scope: test number {i}")
+            fmt.test_end(count=i, total=10)
+    finally:
+        sys.stderr = orig_stderr
+        if saved is None:
+            _os.environ.pop("TAPIFY_PROGRESS_BAR", None)
+        else:
+            _os.environ["TAPIFY_PROGRESS_BAR"] = saved
+    # every update must be a carriage-return redraw, never a wrapped newline
+    t.ok(all("\n" not in chunk for chunk in writes))
+    t.end()

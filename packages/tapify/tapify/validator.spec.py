@@ -1,3 +1,5 @@
+import re
+
 from tapify import test
 from tapify.validator import (
     create_validator,
@@ -115,4 +117,81 @@ def _(t):
 def _(t):
     at = get_at()
     t.match(at, r"\.py:\d+$")
+    t.end()
+
+
+@test("validator: filter_frames keeps deepest user frame onward")
+def _(t):
+    import traceback
+
+    from tapify.validator import filter_frames
+
+    frames = traceback.extract_stack()
+    kept = filter_frames(frames)
+    t.not_equal(kept, frames)
+    t.end()
+
+
+@test("validator: filter_frames drops python internals from head")
+def _(t):
+    import traceback
+
+    from tapify.validator import _is_internal, filter_frames
+
+    kept = filter_frames(traceback.extract_stack())
+    names = [frame.filename for frame in kept]
+    t.ok(not _is_internal(names[0]) or len(kept) == 1)
+    t.end()
+
+
+@test("validator: get_stack output has no runpy/threading frames")
+def _(t):
+    from tapify.validator import get_stack
+
+    stack = get_stack()
+    t.ok("runpy" not in stack and "threading" not in stack)
+    t.end()
+
+
+@test("validator: get_stack starts at a user file")
+def _(t):
+    import os
+
+    from tapify.validator import get_stack
+
+    stack = get_stack()
+    first_file = [line for line in stack.splitlines() if 'File "' in line][0]
+    t.match(first_file, rf"{re.escape(os.path.basename(__file__.removesuffix('.spec.py')))}")
+    t.end()
+
+
+@test("validator: get_at falls back when no user frame exists")
+def _(t):
+    from unittest import mock
+
+    from tapify.validator import get_at
+
+    frames = [
+        mock.Mock(filename="/usr/lib/python3.12/threading.py", lineno=1030),
+        mock.Mock(filename="<frozen runpy>", lineno=198),
+    ]
+    with mock.patch("tapify.validator.traceback.extract_stack", return_value=frames):
+        at = get_at()
+    t.equal(at, "at <frozen runpy>:198")
+    t.end()
+
+
+@test("validator: _is_user rejects internal and generated filenames")
+def _(t):
+    from tapify.validator import _is_user
+
+    result = (
+        _is_user("<frozen runpy>"),
+        _is_user("/x/asyncio/base.py"),
+        _is_user("/x/tapify/tapify/operators.py"),
+        _is_user("/env/site-packages/pkg/mod.py"),
+        _is_user("/w/packages/formatter-tap/formatter_tap/__init__.py"),
+        _is_user("/tmp/user_code.spec.py"),
+    )
+    t.equal(result, (False, False, False, False, False, True))
     t.end()

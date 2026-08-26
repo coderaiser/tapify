@@ -86,7 +86,12 @@ def pass_(message="(unnamed assert)") -> dict:
 
 
 def fail(error, at="") -> dict:
-    stack = "".join(traceback.format_tb(getattr(error, "__traceback__", None)))
+
+    from tapify.validator import _is_internal, filter_frames
+
+    frames = traceback.extract_tb(getattr(error, "__traceback__", None))
+    kept = [frame for frame in frames if not _is_internal(frame.filename)]
+    stack = "".join(traceback.format_list(filter_frames(kept))) if kept else ""
     return {"is": False, "stack": stack, "output": "", "message": error, "at": at}
 
 
@@ -131,9 +136,8 @@ _OPERATORS = {
 
 
 def _run(name, runner_state, test_state):
-    import traceback
 
-    from tapify.format import format_output, parse_at
+    from tapify.format import format_output
 
     runner_state["inc_count"]()
     count = runner_state["count"]()
@@ -145,7 +149,9 @@ def _run(name, runner_state, test_state):
         return
 
     runner_state["inc_failed"]()
-    error_stack = test_state.get("stack") or "".join(traceback.format_stack())
+    from tapify.validator import get_at, get_stack
+
+    error_stack = test_state.get("stack") or get_stack()
     fmt.emit(
         "fail",
         {
@@ -156,7 +162,7 @@ def _run(name, runner_state, test_state):
             "expected": test_state.get("expected"),
             "output": test_state.get("output", ""),
             "error_stack": format_output(error_stack),
-            "at": test_state.get("at") or parse_at("".join(traceback.format_stack())),
+            "at": test_state.get("at") or get_at(),
         },
     )
 

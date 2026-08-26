@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 members = [
     "formatter-fail",
     "formatter-json-lines",
+    "formatter-json-lines-fail",
     "formatter-progress-bar",
     "formatter-short",
     "formatter-tap",
@@ -277,6 +278,17 @@ dependencies = [
 requires-dist = [{ name = "tapify", editable = "packages/tapify" }]
 
 [[package]]
+name = "formatter-json-lines-fail"
+version = "0.1.0"
+source = { editable = "packages/formatter-json-lines-fail" }
+dependencies = [
+    { name = "tapify" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "tapify", editable = "packages/tapify" }]
+
+[[package]]
 name = "formatter-progress-bar"
 version = "0.1.0"
 source = { editable = "packages/formatter-progress-bar" }
@@ -368,6 +380,7 @@ dev = [
     { name = "coverage" },
     { name = "formatter-fail" },
     { name = "formatter-json-lines" },
+    { name = "formatter-json-lines-fail" },
     { name = "formatter-progress-bar" },
     { name = "formatter-short" },
     { name = "formatter-tap" },
@@ -382,6 +395,7 @@ dev = [
     { name = "coverage", specifier = ">=7" },
     { name = "formatter-fail", editable = "packages/formatter-fail" },
     { name = "formatter-json-lines", editable = "packages/formatter-json-lines" },
+    { name = "formatter-json-lines-fail", editable = "packages/formatter-json-lines-fail" },
     { name = "formatter-progress-bar", editable = "packages/formatter-progress-bar" },
     { name = "formatter-short", editable = "packages/formatter-short" },
     { name = "formatter-tap", editable = "packages/formatter-tap" },

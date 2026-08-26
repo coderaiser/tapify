@@ -25,21 +25,42 @@ def reset_validations():
     _validations.update(_VALIDATIONS_DEFAULTS)
 
 
+def _is_user(filename: str) -> bool:
+    if filename.startswith("<"):
+        return False
+    if "site-packages" in filename:
+        return False
+    if "/tapify/tapify/" in filename and not filename.endswith(".spec.py"):
+        return False
+    if "/packages/formatter-" in filename and filename.endswith("__init__.py"):
+        return False
+    return not _is_internal(filename)
+
+
+def filter_frames(frames: list) -> list:
+    """Return only user-code frames, in stack order (Python internals dropped).
+    Falls back to the original frames when no user frame is found."""
+    kept = [frame for frame in frames if _is_user(frame.filename)]
+    return kept or list(frames)
+
+
+def get_stack() -> str:
+    """Formatted call stack starting from user code, no Python internals."""
+    return "".join(traceback.format_list(filter_frames(traceback.extract_stack())))
+
+
 def get_at() -> str:
     """Walk the Python call stack, skip runner/internal frames,
-    return 'at filename:lineno' of the first user frame."""
-    frames = traceback.extract_stack()
-    for frame in reversed(frames[:-1]):
-        if frame.filename.startswith("<"):
-            continue
-        if "tapify" in frame.filename:
-            continue
-        if "site-packages" in frame.filename:
-            continue
-        if _is_internal(frame.filename):
-            continue
+    return 'at filename:lineno' of the deepest user frame."""
+    all_frames = list(traceback.extract_stack())
+    frames = all_frames
+    if frames and not _is_user(frames[-1].filename):
+        frames = frames[:-1]
+    kept = [frame for frame in frames if _is_user(frame.filename)]
+    if kept:
+        frame = kept[-1]
         return f"at {frame.filename}:{frame.lineno}"
-    last = frames[-1]
+    last = all_frames[-1]
     return f"at {last.filename}:{last.lineno}"
 
 

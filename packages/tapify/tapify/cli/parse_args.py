@@ -4,7 +4,7 @@ import sys
 
 from tapify import exit_codes
 
-_VALID_FORMATS = ("tap", "fail", "short", "progress-bar", "json-lines")
+_VALID_FORMATS = ("tap", "fail", "short", "progress-bar", "json-lines", "json-lines-fail")
 
 
 def _default_format() -> str:

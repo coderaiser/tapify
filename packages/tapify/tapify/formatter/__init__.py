@@ -7,6 +7,7 @@ _BUILTIN = {
     "short": "formatter_short",
     "progress-bar": "formatter_progress_bar",
     "json-lines": "formatter_json_lines",
+    "json-lines-fail": "formatter_json_lines_fail",
 }
 
 

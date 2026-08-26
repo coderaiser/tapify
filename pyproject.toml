@@ -44,6 +44,7 @@ dev = [
     "formatter-short",
     "formatter-progress-bar",
     "formatter-json-lines",
+    "formatter-json-lines-fail",
     "ruff>=0.6",
     "coverage>=7",
 ]
@@ -55,3 +56,4 @@ formatter-fail = { workspace = true }
 formatter-short = { workspace = true }
 formatter-progress-bar = { workspace = true }
 formatter-json-lines = { workspace = true }
+formatter-json-lines-fail = { workspace = true }

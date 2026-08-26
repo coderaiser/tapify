@@ -38,3 +38,15 @@ def _(t):
     results = (formatter_fail.success(count=1, message="x"), formatter_fail.test_end(count=1))
     t.equal(results, (None, None))
     t.end()
+
+
+@test("formatter_fail: comment is forwarded to tap formatter")
+def _(t):
+    def fn(t2):
+        t2.comment("hello")
+        t2.ok(True)
+        t2.end()
+
+    out = _run({"scope: c": fn})
+    t.match(out, r"# hello")
+    t.end()

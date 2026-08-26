@@ -76,3 +76,18 @@ def _(t):
         raised = True
     t.ok(raised)
     t.end()
+
+
+@test("format: parse_at skips site-packages and tapify frames")
+def _(t):
+    from tapify.format import parse_at
+
+    stack = "\n".join(
+        (
+            '  File "/env/site-packages/x.py", line 1, in m',
+            '  File "/w/tapify/tapify/operators.py", line 9, in _run',
+            '  File "/tmp/st/user.spec.py", line 7, in _',
+        )
+    )
+    t.equal(parse_at(stack), "at /tmp/st/user.spec.py:7")
+    t.end()
