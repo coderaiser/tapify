@@ -74,6 +74,21 @@ def _visible_len(s: str) -> int:
     return sum(2 if unicodedata.east_asian_width(c) in "WF" or ord(c) > 0xFFFF else 1 for c in s)
 
 
+def _truncate(s: str, limit: int) -> str:
+    """Trim s so its display width fits limit, marking cuts with an ellipsis."""
+    if limit <= 0:
+        return ""
+    out = ""
+    for c in s:
+        if _visible_len(out) + _visible_len(c) > limit - 1:
+            return out + "…"
+        out += c
+    return out
+
+
+_MIN_BAR = 10
+
+
 def _render_bar(count, done, color, test="", failed=0) -> str:
     width = shutil.get_terminal_size().columns
     bar_color = _color_fn(color)
@@ -83,11 +98,17 @@ def _render_bar(count, done, color, test="", failed=0) -> str:
     # cliProgress: bar fills the terminal minus the rendered payload;
     # failed shows a red error count, 👌 when the current test passes
     failed_part = bar_color_red(failed) if failed else OK
-    payload = f"{percent}% | {failed_part} | {done}/{count} | {test}"
-    bar_width = max(width - _visible_len(payload) - 2, 10)
+    prefix = f"{percent}% | {failed_part} | {done}/{count} | "
+    bar_width = max(width - _visible_len(prefix) - _visible_len(test) - 2, _MIN_BAR)
+    if _visible_len(prefix) + _visible_len(test) + bar_width + 2 > width:
+        # long test name would overflow a single row — truncate it so every
+        # redraw stays on one line instead of wrapping
+        allowed = width - _visible_len(prefix) - bar_width - 3
+        test = _truncate(test, allowed)
+        bar_width = max(width - _visible_len(prefix) - _visible_len(test) - 2, _MIN_BAR)
     filled = int(bar_width * done / count)
     bar = bar_color("█" * filled) + "░" * (bar_width - filled)
-    return f"{bar} {payload}"
+    return f"{bar} {prefix}{test}"
 
 
 def create_formatter(color=None):

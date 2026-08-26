@@ -216,12 +216,37 @@ def _(t):
 
 @test("formatter_progress_bar: color functions")
 def _(t):
-    identity = fpb._color_fn("#ff0000")
-    named = fpb._color_fn("red")
-    unknown = fpb._color_fn("chartreuse")
+    class _NoTty(io.StringIO):
+        def isatty(self):
+            return False
+
+    orig = sys.stderr
+    sys.stderr = _NoTty()
+    try:
+        identity = fpb._color_fn("#ff0000")
+        named = fpb._color_fn("red")
+        unknown = fpb._color_fn("chartreuse")
+    finally:
+        sys.stderr = orig
     results = (identity("x"), named("x"), unknown("x"), fpb._devnull().__class__.__name__)
     # not a tty → no colors
     t.equal(results, ("x", "x", "x", "_Devnull"))
+    t.end()
+
+
+@test("formatter_progress_bar: color functions emit ansi on a tty")
+def _(t):
+    class _Tty(io.StringIO):
+        def isatty(self):
+            return True
+
+    orig = sys.stderr
+    sys.stderr = _Tty()
+    try:
+        named = fpb._color_fn("red")
+    finally:
+        sys.stderr = orig
+    t.equal(named("x"), "\x1b[31mx\x1b[39m")
     t.end()
 
 
@@ -266,11 +291,20 @@ def _(t):
 
 @test("formatter_progress_bar: payload shows failed count after failure")
 def _(t):
-    fmt = fpb.create_formatter()
-    fmt.start(total=1)
-    fmt.test(test="scope: bad")
-    fmt.fail(at="", count=1, message="m", operator="ok", result=False, expected=True)
-    fmt.test_end(count=1, total=1)
+    class _NoTty(io.StringIO):
+        def isatty(self):
+            return False
+
+    orig = sys.stderr
+    sys.stderr = _NoTty()
+    try:
+        fmt = fpb.create_formatter()
+        fmt.start(total=1)
+        fmt.test(test="scope: bad")
+        fmt.fail(at="", count=1, message="m", operator="ok", result=False, expected=True)
+        fmt.test_end(count=1, total=1)
+    finally:
+        sys.stderr = orig
     rendered = fpb._last_render()[0]
     t.match(rendered, r" \| 1 \| 1/1 \| scope: bad")
     t.end()
@@ -278,11 +312,20 @@ def _(t):
 
 @test("formatter_progress_bar: no 👌 after failure")
 def _(t):
-    fmt = fpb.create_formatter()
-    fmt.start(total=1)
-    fmt.test(test="scope: bad")
-    fmt.fail(at="", count=1, message="m", operator="ok", result=False, expected=True)
-    fmt.test_end(count=1, total=1)
+    class _NoTty(io.StringIO):
+        def isatty(self):
+            return False
+
+    orig = sys.stderr
+    sys.stderr = _NoTty()
+    try:
+        fmt = fpb.create_formatter()
+        fmt.start(total=1)
+        fmt.test(test="scope: bad")
+        fmt.fail(at="", count=1, message="m", operator="ok", result=False, expected=True)
+        fmt.test_end(count=1, total=1)
+    finally:
+        sys.stderr = orig
     rendered = fpb._last_render()[0]
     t.not_match(rendered, r"👌")
     t.end()
@@ -455,4 +498,40 @@ def _(t):
             os.environ["TAPIFY_PROGRESS_BAR"] = saved
 
     t.ok(any("\x1b[?25l" in w for w in writes))
+    t.end()
+
+
+@test("formatter_progress_bar: _truncate fits limit and marks cut")
+def _(t):
+    t.equal(fpb._truncate("hello world", 5), "hell…")
+    t.end()
+
+
+@test("formatter_progress_bar: _truncate keeps short strings")
+def _(t):
+    t.equal(fpb._truncate("hi", 5), "hi")
+    t.end()
+
+
+@test("formatter_progress_bar: _truncate of zero limit is empty")
+def _(t):
+    t.equal(fpb._truncate("anything", 0), "")
+    t.end()
+
+
+@test("formatter_progress_bar: _truncate respects wide char widths")
+def _(t):
+    t.equal(fpb._truncate("a👌b", 3), "a…")
+    t.end()
+
+
+@test("formatter_progress_bar: long test name stays on one terminal line")
+def _(t):
+    import shutil
+
+    columns = shutil.get_terminal_size().columns
+    long_name = "formatter_progress_bar: a very long failing test name " * 2
+    rendered = fpb._render_bar(100, 1, "#f9d472", long_name)
+    visible = fpb._visible_len(_ANSI_RE.sub("", rendered))
+    t.ok(visible <= columns - 1)
     t.end()
