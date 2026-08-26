@@ -108,6 +108,11 @@ def create_formatter(color=None):
             lines.clear()
             _last_render_box.clear()
             lines.append("TAP version 13")
+            # cli-progress hideCursor: true — hide cursor on the bar stream
+            stream = _get_stream(total)
+            if hasattr(stream, "isatty") and stream.isatty():
+                stream.write("\x1b[?25l")
+                stream.flush()
             return None
 
         @staticmethod
@@ -173,6 +178,12 @@ def create_formatter(color=None):
 
         @staticmethod
         def end(*, count=0, passed=0, failed=0, skipped=0, **_) -> str:
+            stream = _get_stream(_total_box[0])
+            # Mirror cli-progress clearOnComplete: true + hideCursor: true:
+            # \r → column 0, \x1b[2K → erase entire line, \x1b[?25h → show cursor
+            if hasattr(stream, "isatty") and stream.isatty():
+                stream.write("\r\x1b[2K\x1b[?25h")
+                stream.flush()
             lines.append("")
             lines.append(f"1..{count}")
             lines.append(f"# tests {count}")

@@ -387,3 +387,72 @@ def _(t):
     # every update must be a carriage-return redraw, never a wrapped newline
     t.ok(all("\n" not in chunk for chunk in writes))
     t.end()
+
+
+@test("formatter_progress_bar: end clears bar line before output")
+def _(t):
+    stderr_writes = []
+
+    class _FakeTty(io.StringIO):
+        def write(self, s):
+            stderr_writes.append(s)
+
+        def flush(self):
+            return None
+
+        def isatty(self):
+            return True
+
+    saved = os.environ.get("TAPIFY_PROGRESS_BAR")
+    os.environ["TAPIFY_PROGRESS_BAR"] = "1"
+    orig_stderr = sys.stderr
+    sys.stderr = _FakeTty()
+    try:
+        fmt = fpb.create_formatter()
+        fmt.start(total=1)
+        fmt.test(test="scope: x")
+        fmt.test_end(count=1, total=1)
+        out = fmt.end(count=1, passed=1, failed=0, skipped=0)
+    finally:
+        sys.stderr = orig_stderr
+        if saved is None:
+            os.environ.pop("TAPIFY_PROGRESS_BAR", None)
+        else:
+            os.environ["TAPIFY_PROGRESS_BAR"] = saved
+
+    # the clear sequence must go to stderr, not be embedded in stdout output
+    clear_writes = [w for w in stderr_writes if "\x1b[2K" in w]
+    t.ok(len(clear_writes) > 0 and "\x1b" not in out)
+    t.end()
+
+
+@test("formatter_progress_bar: start hides cursor on tty bar stream")
+def _(t):
+    writes = []
+
+    class _FakeTty(io.StringIO):
+        def write(self, s):
+            writes.append(s)
+
+        def flush(self):
+            return None
+
+        def isatty(self):
+            return True
+
+    saved = os.environ.get("TAPIFY_PROGRESS_BAR")
+    os.environ["TAPIFY_PROGRESS_BAR"] = "1"
+    orig_stderr = sys.stderr
+    sys.stderr = _FakeTty()
+    try:
+        fmt = fpb.create_formatter()
+        fmt.start(total=5)
+    finally:
+        sys.stderr = orig_stderr
+        if saved is None:
+            os.environ.pop("TAPIFY_PROGRESS_BAR", None)
+        else:
+            os.environ["TAPIFY_PROGRESS_BAR"] = saved
+
+    t.ok(any("\x1b[?25l" in w for w in writes))
+    t.end()
