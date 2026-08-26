@@ -1,5 +1,6 @@
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -110,6 +111,47 @@ def _(t):
 def _(t):
     code = _run(["-r", "__definitely_not_a_module__"])
     t.equal(code, 3)
+    t.end()
+
+
+@test("cli: __main__.py inside glob does not recurse")
+def _(t):
+    d = tempfile.mkdtemp()
+    # "__main__.py" sorts before "z.spec.py": the nested run re-imports
+    # __main__.py before finishing → infinite recursion without the fix
+    pathlib.Path(d, "__main__.py").write_text("x = 1\n")
+    pathlib.Path(d, "z.spec.py").write_text(
+        'from tapify import test\n@test("scope: pass")\ndef _(t): t.ok(True); t.end()\n'
+    )
+    try:
+        r = subprocess.run(
+            [_PY, "-m", "tapify", "**/*.py", "-f", "tap", "--no-worker"],
+            capture_output=True,
+            cwd=d,
+            timeout=30,
+        )
+        code = r.returncode
+    finally:
+        shutil.rmtree(d)
+    t.equal(code, 0)
+    t.end()
+
+
+@test("cli: _import_file never loads a file as __main__")
+def _(t):
+    import tapify.__main__ as m
+
+    d = tempfile.mkdtemp()
+    p = pathlib.Path(d, "__main__.py")
+    body = "import pathlib\n"
+    body += 'pathlib.Path(__file__).with_name("name.txt").write_text(__name__)\n'
+    p.write_text(body)
+    try:
+        m._import_file(p)
+        loaded_as = (p.parent / "name.txt").read_text()
+    finally:
+        shutil.rmtree(d)
+    t.not_equal(loaded_as, "__main__")
     t.end()
 
 

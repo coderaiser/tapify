@@ -104,7 +104,10 @@ def main():
 
 
 def _import_file(path: Path):
-    spec = importlib.util.spec_from_file_location(path.stem, path)
+    # Never use path.stem directly: "__main__.py" would get __name__ ==
+    # "__main__" and re-execute main() → infinite recursion.
+    name = f"tapify_spec_{path.stem}"
+    spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
 
